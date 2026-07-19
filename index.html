@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FluentLoop Local — Working Build v1.1</title>
+  <title>FluentLoop Local — Working Build v1.1.1</title>
   <style>
     :root{
       --bg:#f5f7fb;
@@ -226,7 +226,7 @@
       <button data-section="status">🛠 Status</button>
     </div>
     <div class="footer">
-      Working Build v1.1<br>
+      Working Build v1.1.1<br>
       B1 → B2 · Psychology · Daily Life · Business
     </div>
   </aside>
@@ -301,7 +301,6 @@
               <span class="lookup" data-word="get started">get started</span>.</p>
           </div>
           <div class="toolbar">
-            <button class="btn secondary" onclick="simplifyArticle()">Simplify one level</button>
             <button class="btn secondary" onclick="showQuestions()">Comprehension</button>
             <button class="btn" onclick="finishReading()">Finish reading</button>
           </div>
@@ -348,6 +347,9 @@
           </div>
 
           <div class="coach-composer">
+            <textarea id="chatInput" placeholder="Transcript appears here when browser speech recognition is supported. You can also type it manually."
+              onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendChat()}"></textarea>
+
             <button id="holdToSpeakButton" class="btn hold-record-button"
               aria-pressed="false"
               onpointerdown="beginHoldRecording(event)"
@@ -366,11 +368,8 @@
               <p id="transcriptionStatus" class="muted" style="margin-bottom:0">You can edit the transcript before sending.</p>
             </div>
 
-            <textarea id="chatInput" placeholder="Transcript appears here when browser speech recognition is supported. You can also type it manually."
-              onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendChat()}"></textarea>
             <div class="coach-actions">
               <button id="sendParagraphButton" class="btn" onclick="sendChat()">Send response</button>
-              <button class="btn secondary" onclick="speakLastQuestion()">🔊 Hear question</button>
               <button class="btn small secondary" onclick="endConversationSession()">End & review session</button>
             </div>
             <div class="button-legend"><span>紫色：主要操作</span><span>白色：次要操作</span><span>紅色：正在錄音</span><span>淺紫：目前已開啟</span></div>
@@ -448,7 +447,7 @@
     <section id="status" class="section">
       <div class="topbar">
         <div><h2>System Status & Data</h2><p>Use this page to distinguish a working feature, a browser limitation, and a feature that has not been connected yet.</p></div>
-        <span class="feature-status working">Working Build v1.1</span>
+        <span class="feature-status working">Working Build v1.1.1</span>
       </div>
 
       <div class="grid grid-2">

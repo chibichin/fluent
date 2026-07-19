@@ -1,61 +1,19 @@
 {
-  "results": [
-    {
-      "name": "title",
-      "pass": true,
-      "detail": "FluentLoop Local — Working Build v1.1"
-    },
-    {
-      "name": "no initial JS errors",
-      "pass": true,
-      "detail": ""
-    },
-    {
-      "name": "self test renders",
-      "pass": true,
-      "detail": "Local storage | Can save and read text data | Pass | Required interface | All required elements found | Pass | Data schema | Schema version 2 | Pass | Microphone API | Permission is only requested when you hold the recording button | Pass | IndexedDB audio | Write, read and delete passed | Pass | Speech transcription | Optional and browser-dependent | Pass | Question audio | Browser-dependent | Pass"
-    },
-    {
-      "name": "active button indication",
-      "pass": true,
-      "detail": "btn small is-active true"
-    },
-    {
-      "name": "sentence saved",
-      "pass": true,
-      "detail": "Sentence saved |  | Original: I put off cleaning my room because I feel tired. |  | Corrected / natural: I put off cleaning my room because I feel tired. |  | No major issue detected by the local rules. |  | Next scheduled review: 3 days |  | Open sentence history"
-    },
-    {
-      "name": "history read-only",
-      "pass": true,
-      "detail": "Sentence practice | 7/19/2026, 4:29:25 AM | Original | I put off cleaning my room because I feel tired. | Corrected / natural version | I put off cleaning my room because I feel tired."
-    },
-    {
-      "name": "history gray styling",
-      "pass": true,
-      "detail": "rgb(241, 243, 247)"
-    },
-    {
-      "name": "record while held",
-      "pass": true,
-      "detail": "● Recording 00:00 class=btn hold-record-button"
-    },
-    {
-      "name": "release creates playback",
-      "pass": true,
-      "detail": "visible=True src=blob:null/70892b1a-7597-4f90-b"
-    },
-    {
-      "name": "recording attached to turn",
-      "pass": true,
-      "detail": "count=1"
-    },
-    {
-      "name": "summary recording player",
-      "pass": true,
-      "detail": "count=1"
-    }
-  ],
-  "errors": [],
-  "all_pass": true
+  "version": "v1.1.1",
+  "status": "passed",
+  "checks": {
+    "simplify_one_level_removed": true,
+    "learn_comprehension_button_present": true,
+    "learn_finish_reading_button_present": true,
+    "hear_question_removed": true,
+    "transcript_above_hold_to_speak": true,
+    "hold_to_speak_pointer_handlers_preserved": true,
+    "javascript_syntax": "passed",
+    "headless_dom_regression_test": "passed",
+    "page_errors": []
+  },
+  "notes": [
+    "The regression test loaded the full HTML in headless Chromium using page.set_content.",
+    "Actual microphone permission and hardware recording still require a device/browser test."
+  ]
 }

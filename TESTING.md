@@ -26,3 +26,11 @@ The automated browser environment blocks navigation to local test origins. Media
 5. Play the recording, type or edit the transcript, and send.
 6. End the session and replay the saved recording.
 7. Reload the page and confirm saved sentence history remains available.
+
+
+## v1.1.1 regression checks
+
+- Learn toolbar contains only `Comprehension` and `Finish reading`.
+- Coach transcript textarea appears before `Hold to speak`.
+- `Hear question` is absent from the Coach interface.
+- Hold-to-record event handlers remain attached after reordering.

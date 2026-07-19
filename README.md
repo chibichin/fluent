@@ -1,4 +1,4 @@
-# FluentLoop Local — Working Build v1.1
+# FluentLoop Local Working Build v1.1.1
 
 Open `index.html` in a modern Chromium-based browser. Chrome or Edge is recommended for microphone and optional speech transcription.
 
@@ -34,3 +34,10 @@ Open `index.html` in a modern Chromium-based browser. Chrome or Edge is recommen
 6. End the session and replay the saved recording in the summary.
 7. Open Learning Library and make a sentence with a target expression.
 8. Open `Review now`; confirm entries are gray and cannot be edited.
+
+
+## v1.1.1 介面調整
+
+- Learn 頁移除 `Simplify one level`。
+- Coach 頁把 `Hold to speak` 移到 transcript 輸入框正下方。
+- Coach 頁移除 `Hear question`。
