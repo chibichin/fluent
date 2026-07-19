@@ -1,19 +1,42 @@
 {
-  "version": "v1.1.1",
-  "status": "passed",
-  "checks": {
-    "simplify_one_level_removed": true,
-    "learn_comprehension_button_present": true,
-    "learn_finish_reading_button_present": true,
-    "hear_question_removed": true,
-    "transcript_above_hold_to_speak": true,
-    "hold_to_speak_pointer_handlers_preserved": true,
-    "javascript_syntax": "passed",
-    "headless_dom_regression_test": "passed",
+  "version": "v1.2",
+  "status": "passed_with_device_check",
+  "syntax": {
+    "javascript": "passed with node --check",
+    "page_title": "FluentLoop Local — Working Build v1.2",
     "page_errors": []
   },
-  "notes": [
-    "The regression test loaded the full HTML in headless Chromium using page.set_content.",
-    "Actual microphone permission and hardware recording still require a device/browser test."
+  "recording_library_browser_test": {
+    "method": "Headless Chromium with an in-memory storage adapter",
+    "recording_cards_rendered": 2,
+    "transcripts_rendered": true,
+    "single_recording_delete": "passed",
+    "audio_reference_removed_but_text_retained": true,
+    "delete_all_audio": "passed",
+    "empty_state_after_delete_all": true
+  },
+  "recording_archive_test": {
+    "zip_valid": true,
+    "files": [
+      "manifest.json",
+      "README.txt",
+      "recordings/<timestamp>_<mode>_<audio-id>.webm"
+    ],
+    "recording_count": 2,
+    "manifest_includes_transcripts": true
+  },
+  "indexeddb": {
+    "implementation_present": true,
+    "device_test_required": true,
+    "reason": "The automated environment blocks navigation to local or synthetic origins. Run Status > Run self-test in Chrome or Edge to verify IndexedDB write, list, ZIP build and delete on the actual device."
+  },
+  "manual_test_path": [
+    "Record and send two Conversation responses.",
+    "End the session and refresh the page.",
+    "Open Learning Library > Recordings.",
+    "Play both recordings.",
+    "Export the Recording Archive and open the ZIP.",
+    "Delete one audio recording and verify its transcript remains.",
+    "Run Status > Run self-test."
   ]
 }

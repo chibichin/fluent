@@ -34,3 +34,26 @@ The automated browser environment blocks navigation to local test origins. Media
 - Coach transcript textarea appears before `Hold to speak`.
 - `Hear question` is absent from the Coach interface.
 - Hold-to-record event handlers remain attached after reordering.
+
+
+## v1.1.2 retry checks
+
+- Click `Say it again`: visible retry panel appears.
+- Button changes to `✓ Retry selected`.
+- Recording button changes to `Hold to retry`.
+- Send button changes to `Send retry`.
+- Cancel restores normal controls.
+- Sending a retry increments retry count and does not append an extra follow-up question.
+
+
+## v1.2 recording management checks
+
+1. Record and send two Conversation responses.
+2. End the session and refresh the page.
+3. Open Learning Library → Recordings.
+4. Confirm both recordings play after refresh.
+5. Download one recording and verify the audio file opens.
+6. Delete one recording and confirm its transcript remains in conversation data.
+7. Export Recording Archive and verify ZIP contains `manifest.json` and the recordings folder.
+8. Run Status → Self-test; `IndexedDB & archive` should pass.
+9. Test Delete all audio; text progress should remain.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FluentLoop Local — Working Build v1.1.1</title>
+  <title>FluentLoop Local — Working Build v1.2</title>
   <style>
     :root{
       --bg:#f5f7fb;
@@ -97,6 +97,17 @@
     .history-entry .history-original{color:#626d80;margin:8px 0}
     .history-entry .history-corrected{color:#243149;margin:8px 0}
     .history-meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#7a8495}
+    .recording-dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .recording-dashboard .mini-card{padding:15px;border:1px solid var(--line);border-radius:14px;background:#fafbfe}
+    .recording-dashboard strong{display:block;font-size:25px;margin-top:4px}
+    .recording-card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:13px;background:white}
+    .recording-card audio{width:100%;margin:12px 0}
+    .recording-card .recording-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .recording-card .transcript-box{padding:12px;border-radius:12px;background:#f1f3f7;color:#485267;margin-top:10px}
+    .recording-card .corrected-box{padding:12px;border-radius:12px;background:var(--green-soft);color:#1c6649;margin-top:8px}
+    .danger-panel{padding:13px;border:1px solid #f0c3c8;border-radius:12px;background:var(--danger-soft);margin-top:10px}
+    .storage-meter{height:10px;background:#edf0f5;border-radius:999px;overflow:hidden;margin:9px 0}
+    .storage-meter span{display:block;height:100%;background:linear-gradient(90deg,#5c63f2,#55c7ae);border-radius:999px}
     .button-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
     .metric{background:rgba(255,255,255,.1);padding:18px;border-radius:16px}
     .metric strong{display:block;font-size:27px}.metric span{color:#d8dcff;font-size:13px}
@@ -147,6 +158,10 @@
     .target-chip.used{background:var(--green-soft);color:var(--green)}
     .inline-coach-panel{margin-top:10px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fafbfe}
     .retry-badge{font-size:11px;font-weight:800;padding:4px 7px;border-radius:999px;background:var(--amber-soft);color:var(--amber);margin-left:6px}
+    .retry-mode-panel{margin:10px 0;padding:13px 14px;border-radius:13px;background:var(--amber-soft);border:1px solid #edd59c;color:#684914}
+    .retry-mode-panel p{margin:6px 0;color:#684914}
+    .retry-mode-panel .retry-example{padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.58);margin-top:8px}
+    .hold-record-button.retry-ready{background:var(--primary-soft);color:#4047cf;border-color:var(--primary);box-shadow:0 0 0 4px rgba(92,99,242,.12)}
     .session-summary{margin-top:18px;border:1px solid #cfeede;background:var(--green-soft)}
     .conversation-stat{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(31,157,106,.16)}
     .conversation-stat:last-child{border-bottom:0}
@@ -198,7 +213,7 @@
       .app{grid-template-columns:1fr}
       .sidebar{display:none}
       main{padding:18px 16px 90px}
-      .grid-2,.grid-3,.hero,.reading-layout{grid-template-columns:1fr}
+      .grid-2,.grid-3,.hero,.reading-layout,.recording-dashboard{grid-template-columns:1fr}
       .mobile-nav{
         display:grid;grid-template-columns:repeat(5,1fr);position:fixed;bottom:0;left:0;right:0;
         background:white;border-top:1px solid var(--line);z-index:20;
@@ -226,7 +241,7 @@
       <button data-section="status">🛠 Status</button>
     </div>
     <div class="footer">
-      Working Build v1.1.1<br>
+      Working Build v1.2<br>
       B1 → B2 · Psychology · Daily Life · Business
     </div>
   </aside>
@@ -350,6 +365,8 @@
             <textarea id="chatInput" placeholder="Transcript appears here when browser speech recognition is supported. You can also type it manually."
               onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendChat()}"></textarea>
 
+            <div id="retryModePanel" class="retry-mode-panel hidden"></div>
+
             <button id="holdToSpeakButton" class="btn hold-record-button"
               aria-pressed="false"
               onpointerdown="beginHoldRecording(event)"
@@ -432,6 +449,7 @@
         <button onclick="showLibraryTab('active',this)">Active learning</button>
         <button onclick="showLibraryTab('passive',this)">Passive exposure</button>
         <button onclick="showLibraryTab('writing',this)">Writing history</button>
+        <button onclick="showLibraryTab('recordings',this)">Recordings</button>
       </div>
       <div id="libraryContent"></div>
     </section>
@@ -447,7 +465,7 @@
     <section id="status" class="section">
       <div class="topbar">
         <div><h2>System Status & Data</h2><p>Use this page to distinguish a working feature, a browser limitation, and a feature that has not been connected yet.</p></div>
-        <span class="feature-status working">Working Build v1.1.1</span>
+        <span class="feature-status working">Working Build v1.2</span>
       </div>
 
       <div class="grid grid-2">
@@ -459,6 +477,7 @@
           <div class="settings-row"><b>Writing feedback</b><span>Local word-count and selected grammar rules</span><span class="feature-status limited">Rule-based</span></div>
           <div class="settings-row"><b>Microphone recording</b><span id="recordStatusText">Checking MediaRecorder support…</span><span id="recordStatusBadge" class="feature-status limited">Checking</span></div>
           <div class="settings-row"><b>Local audio storage</b><span id="audioStoreStatusText">Checking IndexedDB support…</span><span id="audioStoreStatusBadge" class="feature-status limited">Checking</span></div>
+          <div class="settings-row"><b>Recording Library</b><span>Play, download, export and delete saved recordings</span><span class="feature-status working">Working</span></div>
           <div class="settings-row"><b>Speech transcription</b><span id="speechStatusText">Checking browser support…</span><span id="speechStatusBadge" class="feature-status limited">Checking</span></div>
           <div class="settings-row"><b>Question audio</b><span id="ttsStatusText">Checking browser support…</span><span id="ttsStatusBadge" class="feature-status limited">Checking</span></div>
           <div class="settings-row"><b>Cloud AI understanding</b><span>Requires a secure backend; no API key is stored here</span><span class="feature-status unavailable">Not connected</span></div>
@@ -476,12 +495,14 @@
       <div class="grid grid-2" style="margin-top:18px">
         <div class="card">
           <h3>Export / import</h3>
-          <p>Export creates a JSON backup containing text data. Audio recordings remain in this browser and are not included in JSON v1.1.</p>
+          <p>JSON backs up text progress. Recording Archive creates one ZIP containing audio files, transcripts and a manifest.</p>
           <div class="toolbar">
-            <button class="btn" onclick="exportData()">Export JSON</button>
-            <label class="btn secondary" style="display:inline-flex;align-items:center">Import JSON<input id="importFile" type="file" accept="application/json" onchange="importData(event)" style="display:none"></label>
+            <button class="btn" onclick="exportData()">Export text JSON</button>
+            <button class="btn secondary" onclick="exportRecordingArchive()">Export Recording Archive</button>
+            <label class="btn secondary" style="display:inline-flex;align-items:center">Import text JSON<input id="importFile" type="file" accept="application/json" onchange="importData(event)" style="display:none"></label>
           </div>
           <div id="dataSummary" class="muted"></div>
+          <div id="storageStatusPanel" style="margin-top:14px"></div>
         </div>
 
         <div class="card">
@@ -684,6 +705,26 @@ async function countAudioRecords(){
   db.close();return count;
 }
 
+async function getAllAudioRecords(){
+  const db=await openAudioDB();
+  const records=await new Promise((resolve,reject)=>{
+    const req=db.transaction(AUDIO_STORE,'readonly').objectStore(AUDIO_STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+  db.close();
+  return records;
+}
+
+async function getAudioStorageStats(){
+  const records=await getAllAudioRecords();
+  return {
+    count:records.length,
+    bytes:records.reduce((total,record)=>total+((record.blob&&record.blob.size)||0),0),
+    records
+  };
+}
+
 async function clearAudioDB(){
   if(!('indexedDB' in window))return;
   const db=await openAudioDB();
@@ -740,7 +781,7 @@ function switchSection(id){
   document.querySelectorAll('[data-section]').forEach(b=>b.classList.toggle('active',b.dataset.section===id));
   if(id==='library') renderLibrary('due');
   if(id==='progress') renderProgress();
-  if(id==='status'){detectBrowserFeatures();renderStatusSummary()}
+  if(id==='status'){detectBrowserFeatures();renderStatusSummary();renderStorageStatusPanel()}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('[data-section]').forEach(b=>b.addEventListener('click',()=>switchSection(b.dataset.section)));
@@ -859,6 +900,7 @@ function finishReading(){
 
 let chatStep=0;
 let awaitingRetry=false;
+let retrySourceTurnId=null;
 let lastQuestion="Some people think procrastination is mainly a time-management problem. Others think it is an emotional problem. What do you think?";
 let conversationSession={turns:[],retries:0,usedTargets:new Set(),corrections:[],recordingCount:0};
 let mediaRecorder=null;
@@ -932,7 +974,20 @@ function stopRecordingResources(){
   if(recordingStream){recordingStream.getTracks().forEach(t=>t.stop());recordingStream=null}
   mediaRecorder=null;recordingChunks=[];recordingStartedAt=0;holdRequested=false;resetRecordButton();
 }
-function resetRecordButton(){const b=document.getElementById('holdToSpeakButton');if(!b)return;b.classList.remove('recording','is-active');b.setAttribute('aria-pressed','false');b.textContent='🎙 Hold to speak'}
+function resetRecordButton(){
+  const b=document.getElementById('holdToSpeakButton');
+  if(!b)return;
+  b.classList.remove('recording');
+  if(awaitingRetry){
+    b.classList.add('retry-ready','is-active');
+    b.setAttribute('aria-pressed','true');
+    b.textContent='🎙 Hold to retry';
+  }else{
+    b.classList.remove('retry-ready','is-active');
+    b.setAttribute('aria-pressed','false');
+    b.textContent='🎙 Hold to speak';
+  }
+}
 function renderRecordingPreview(){
   const preview=document.getElementById('recordingPreview'),player=document.getElementById('recordingPlayer');
   if(!currentRecording){preview.classList.add('hidden');player.removeAttribute('src');return}
@@ -960,22 +1015,42 @@ async function sendChat(){
   const input=document.getElementById('chatInput');const text=input.value.trim();
   if(!text&&!currentRecording){toast('Record or type a response first');return}
   const sendButton=document.getElementById('sendParagraphButton');sendButton.disabled=true;sendButton.textContent='Saving…';
-  const isRetry=awaitingRetry;awaitingRetry=false;
+  const isRetry=awaitingRetry;
+  const retryOfTurnId=isRetry?retrySourceTurnId:null;
   let audioId=null,audioUrl=null,durationMs=0;
   try{
     if(currentRecording){
-      audioId=await saveAudioBlob(currentRecording.blob,{source:'conversation',mode:document.getElementById('coachMode').value,durationMs:currentRecording.durationMs});
+      audioId=await saveAudioBlob(currentRecording.blob,{
+        source:'conversation',
+        mode:document.getElementById('coachMode').value,
+        durationMs:currentRecording.durationMs,
+        transcript:text,
+        retry:isRetry,
+        retryOfTurnId,
+        question:lastQuestion
+      });
       currentRecording.audioId=audioId;audioUrl=currentRecording.url;durationMs=currentRecording.durationMs;sessionObjectUrls.push(audioUrl);conversationSession.recordingCount++;
     }
     const analysis=analyzeChatText(text,isRetry);
-    const turn={id:createId('turn'),text,retry:isRetry,natural:analysis.natural,corrections:analysis.corrections,targets:analysis.targets,audioId,durationMs,at:new Date().toISOString()};
+    const turn={id:createId('turn'),text,retry:isRetry,retryOfTurnId,natural:analysis.natural,corrections:analysis.corrections,targets:analysis.targets,audioId,durationMs,at:new Date().toISOString()};
     conversationSession.turns.push(turn);if(isRetry)conversationSession.retries++;
     analysis.corrections.forEach(c=>conversationSession.corrections.push(c));analysis.targets.forEach(t=>conversationSession.usedTargets.add(t));
     saveConversationSentenceHistory(turn);
     appendBubble(text,'user',isRetry,audioUrl,durationMs);
     input.value='';currentRecording=null;renderRecordingPreview();
+    if(isRetry)clearRetryMode();
     updateConversationStats();updateTargetChips();
-    setTimeout(()=>{appendCoachFeedback(analysis,turn.id);const config=currentConversationConfig();const next=config.follow[Math.min(chatStep,config.follow.length-1)];lastQuestion=next;appendBubble(next,'ai');chatStep++;completeTask('conversation')},200);
+    setTimeout(()=>{
+      appendCoachFeedback(analysis,turn.id);
+      if(!isRetry){
+        const config=currentConversationConfig();
+        const next=config.follow[Math.min(chatStep,config.follow.length-1)];
+        lastQuestion=next;
+        appendBubble(next,'ai');
+        chatStep++;
+      }
+      completeTask('conversation');
+    },200);
   }catch(error){console.error(error);toast('Could not save the recording. Check System Status.');}
   finally{sendButton.disabled=false;sendButton.textContent='Send response'}
 }
@@ -990,7 +1065,7 @@ function appendBubble(text,type,isRetry=false,audioUrl=null,durationMs=0){
 function appendCoachFeedback(analysis,turnId){
   const chat=document.getElementById('chat');const div=document.createElement('div');div.className='feedback';
   const correctionHtml=analysis.corrections.length?analysis.corrections.map(c=>`• ${c}`).join('<br>'):'No major grammar issue detected by the local rules.';
-  div.innerHTML=`<h4>Coach response</h4><p>${analysis.contentResponse}</p><p><b>More natural version</b><br>${escapeHtml(analysis.natural)}</p><p><b>Important language points</b><br>${correctionHtml}</p>${analysis.targets.length?`<p><b>Target used:</b> ${analysis.targets.join(', ')}</p>`:''}<div class="toolbar"><button class="btn small secondary" onclick="prepareRetry('${turnId}')">Say it again</button></div>`;
+  div.innerHTML=`<h4>Coach response</h4><p>${analysis.contentResponse}</p><p><b>More natural version</b><br>${escapeHtml(analysis.natural)}</p><p><b>Important language points</b><br>${correctionHtml}</p>${analysis.targets.length?`<p><b>Target used:</b> ${analysis.targets.join(', ')}</p>`:''}<div class="toolbar"><button id="retry-button-${turnId}" class="btn small secondary retry-action" aria-pressed="false" onclick="prepareRetry('${turnId}',this)">Say it again</button></div>`;
   chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
 }
 
@@ -1021,7 +1096,77 @@ function saveConversationSentenceHistory(turn){
   saveState();
 }
 
-function prepareRetry(turnId){awaitingRetry=true;discardCurrentRecording(false);document.getElementById('chatInput').value='';document.getElementById('chatInput').placeholder='Record the same idea again after reviewing the correction.';document.getElementById('holdToSpeakButton').focus();toast('Retry mode: hold to speak again')}
+function prepareRetry(turnId,button){
+  const sourceTurn=conversationSession.turns.find(turn=>turn.id===turnId);
+  if(!sourceTurn){toast('The original response could not be found.');return}
+
+  awaitingRetry=true;
+  retrySourceTurnId=turnId;
+  discardCurrentRecording(false);
+
+  document.querySelectorAll('.retry-action').forEach(btn=>{
+    btn.classList.remove('is-active');
+    btn.setAttribute('aria-pressed','false');
+    btn.textContent='Say it again';
+  });
+  if(button){
+    button.classList.add('is-active');
+    button.setAttribute('aria-pressed','true');
+    button.textContent='✓ Retry selected';
+  }
+
+  const panel=document.getElementById('retryModePanel');
+  panel.classList.remove('hidden');
+  panel.innerHTML=`
+    <b>Retrying your previous response</b>
+    <p>Say the same idea again using the correction. Your first attempt will remain saved.</p>
+    <div class="retry-example"><b>More natural version:</b><br>${escapeHtml(sourceTurn.natural||sourceTurn.text||'')}</div>
+    <button class="btn small secondary" style="margin-top:10px" onclick="cancelRetryMode()">Cancel retry</button>`;
+
+  const input=document.getElementById('chatInput');
+  input.value='';
+  input.placeholder='Record or type the same idea again. Do not copy the model word for word.';
+
+  const recordButton=document.getElementById('holdToSpeakButton');
+  recordButton.classList.add('retry-ready','is-active');
+  recordButton.setAttribute('aria-pressed','true');
+  recordButton.textContent='🎙 Hold to retry';
+
+  document.getElementById('sendParagraphButton').textContent='Send retry';
+  document.querySelector('.coach-composer').scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>recordButton.focus(),250);
+  toast('Retry mode is ready. Hold the recording button and say the idea again.');
+}
+
+function clearRetryMode(){
+  awaitingRetry=false;
+  retrySourceTurnId=null;
+
+  const panel=document.getElementById('retryModePanel');
+  if(panel){panel.classList.add('hidden');panel.innerHTML=''}
+
+  document.querySelectorAll('.retry-action').forEach(btn=>{
+    btn.classList.remove('is-active');
+    btn.setAttribute('aria-pressed','false');
+    btn.textContent='Say it again';
+  });
+
+  const input=document.getElementById('chatInput');
+  if(input)input.placeholder='Transcript appears here when browser speech recognition is supported. You can also type it manually.';
+
+  const sendButton=document.getElementById('sendParagraphButton');
+  if(sendButton)sendButton.textContent='Send response';
+
+  resetRecordButton();
+}
+
+function cancelRetryMode(){
+  discardCurrentRecording(false);
+  const input=document.getElementById('chatInput');
+  if(input)input.value='';
+  clearRetryMode();
+  toast('Retry cancelled');
+}
 
 function updateTargetChips(){const map={'put off':'put-off','overwhelmed':'overwhelmed','get started':'get-started'};Object.entries(map).forEach(([target,id])=>{const el=document.getElementById(`target-${id}`);const used=conversationSession.usedTargets.has(target);if(el){el.classList.toggle('used',used);el.textContent=(used?'✓ ':'○ ')+target}})}
 function updateConversationStats(){document.getElementById('conversationTurns').textContent=conversationSession.turns.filter(t=>!t.retry).length;document.getElementById('conversationRetries').textContent=conversationSession.retries;document.getElementById('conversationTargets').textContent=`${conversationSession.usedTargets.size}/3`;document.getElementById('conversationRecordings').textContent=conversationSession.recordingCount}
@@ -1041,9 +1186,9 @@ function speakLastQuestion(){if(!('speechSynthesis' in window)){toast('Text-to-s
 
 function resetChat(){
   if(mediaRecorder&&mediaRecorder.state==='recording')mediaRecorder.stop();stopParallelTranscription();discardCurrentRecording(false);sessionObjectUrls.forEach(url=>URL.revokeObjectURL(url));sessionObjectUrls=[];
-  chatStep=0;awaitingRetry=false;conversationSession={turns:[],retries:0,usedTargets:new Set(),corrections:[],recordingCount:0};const config=currentConversationConfig();
+  chatStep=0;awaitingRetry=false;retrySourceTurnId=null;conversationSession={turns:[],retries:0,usedTargets:new Set(),corrections:[],recordingCount:0};const config=currentConversationConfig();
   document.getElementById('coachTopicTitle').textContent=config.title;document.getElementById('coachTopicGoal').textContent=config.goal;lastQuestion=config.first;
-  document.getElementById('chat').innerHTML=`<div class="bubble ai">${escapeHtml(config.first)}</div>`;document.getElementById('chatInput').value='';document.getElementById('chatInput').placeholder='Transcript appears here when browser speech recognition is supported. You can also type it manually.';document.getElementById('conversationSummary').classList.add('hidden');updateConversationStats();updateTargetChips();resetRecordButton();
+  document.getElementById('chat').innerHTML=`<div class="bubble ai">${escapeHtml(config.first)}</div>`;document.getElementById('chatInput').value='';document.getElementById('chatInput').placeholder='Transcript appears here when browser speech recognition is supported. You can also type it manually.';document.getElementById('conversationSummary').classList.add('hidden');const retryPanel=document.getElementById('retryModePanel');if(retryPanel){retryPanel.classList.add('hidden');retryPanel.innerHTML=''}document.querySelectorAll('.retry-action').forEach(btn=>{btn.classList.remove('is-active');btn.setAttribute('aria-pressed','false');btn.textContent='Say it again'});document.getElementById('sendParagraphButton').textContent='Send response';updateConversationStats();updateTargetChips();resetRecordButton();
 }
 
 function showLibraryTab(type,btn){
@@ -1051,6 +1196,7 @@ function showLibraryTab(type,btn){
 }
 function renderLibrary(type='due'){
   const content=document.getElementById('libraryContent');
+  if(type==='recordings'){renderRecordingLibrary();return}
   if(type==='writing'){
     if(!state.writings.length){content.innerHTML='<div class="card"><p>No writing saved yet. Complete today’s short writing to create your first comparison.</p></div>';return}
     content.innerHTML=state.writings.map((w,i)=>`<div class="card"><h3>Writing ${i+1}</h3><p>${escapeHtml(w.text)}</p><span class="tag green">${w.date}</span></div>`).join('');return;
@@ -1126,6 +1272,423 @@ function analyzeWriting(){
   completeTask('writing');saveState();
 }
 function countWords(text){return (text||'').trim().split(/\s+/).filter(Boolean).length}
+
+let recordingLibraryObjectUrls=[];
+
+function releaseRecordingLibraryUrls(){
+  recordingLibraryObjectUrls.forEach(url=>URL.revokeObjectURL(url));
+  recordingLibraryObjectUrls=[];
+}
+
+function formatBytes(bytes){
+  if(!Number.isFinite(bytes)||bytes<=0)return '0 B';
+  const units=['B','KB','MB','GB'];
+  const index=Math.min(Math.floor(Math.log(bytes)/Math.log(1024)),units.length-1);
+  const value=bytes/Math.pow(1024,index);
+  return `${value.toFixed(index===0?0:value>=10?1:2)} ${units[index]}`;
+}
+
+function recordingExtension(mimeType=''){
+  if(mimeType.includes('ogg'))return 'ogg';
+  if(mimeType.includes('mp4')||mimeType.includes('m4a'))return 'm4a';
+  if(mimeType.includes('wav'))return 'wav';
+  return 'webm';
+}
+
+function safeFilePart(value){
+  return String(value||'recording').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,60)||'recording';
+}
+
+function getAudioReferenceIndex(){
+  const index={};
+  state.conversations.forEach(session=>{
+    (session.turns||[]).forEach((turn,position)=>{
+      if(!turn.audioId)return;
+      index[turn.audioId]={
+        conversationId:session.id,
+        sessionDate:session.date,
+        mode:session.mode,
+        turnNumber:position+1,
+        transcript:turn.text||'',
+        corrected:turn.natural||'',
+        retry:!!turn.retry,
+        retryOfTurnId:turn.retryOfTurnId||null,
+        durationMs:turn.durationMs||0,
+        turnDate:turn.at||session.date
+      };
+    });
+  });
+  Object.entries(vocabData).forEach(([word,data])=>{
+    (data.sentenceHistory||[]).forEach(item=>{
+      if(!item.audioId)return;
+      index[item.audioId]=index[item.audioId]||{};
+      index[item.audioId].expressions=index[item.audioId].expressions||[];
+      if(!index[item.audioId].expressions.includes(word))index[item.audioId].expressions.push(word);
+    });
+  });
+  return index;
+}
+
+async function renderRecordingLibrary(){
+  const content=document.getElementById('libraryContent');
+  if(!content)return;
+  releaseRecordingLibraryUrls();
+  content.innerHTML='<div class="card"><p>Loading saved recordings…</p></div>';
+
+  try{
+    const {records,bytes}=await getAudioStorageStats();
+    const referenceIndex=getAudioReferenceIndex();
+    records.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+    content.innerHTML=`
+      <div class="recording-dashboard">
+        <div class="mini-card"><span class="muted">Saved recordings</span><strong>${records.length}</strong></div>
+        <div class="mini-card"><span class="muted">Audio storage</span><strong>${formatBytes(bytes)}</strong></div>
+        <div class="mini-card"><span class="muted">Linked conversations</span><strong>${records.filter(r=>referenceIndex[r.id]).length}</strong></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="recording-title">
+          <div><h3 style="margin-bottom:5px">Recording Library</h3><p style="margin:0">Recordings remain available after refresh because they are stored in IndexedDB.</p></div>
+          <div class="toolbar">
+            <button class="btn" ${records.length?'':'disabled'} onclick="exportRecordingArchive()">Export all as ZIP</button>
+            <button class="btn secondary" onclick="renderRecordingLibrary()">Refresh</button>
+            <button class="btn secondary" ${records.length?'':'disabled'} onclick="toggleDeleteAllRecordings()">Delete all audio</button>
+          </div>
+        </div>
+        <div id="deleteAllRecordingsPanel"></div>
+      </div>
+      <div id="recordingCards"></div>`;
+
+    const cards=document.getElementById('recordingCards');
+    if(!records.length){
+      cards.innerHTML='<div class="card empty-state">No saved recording yet. Record and send a response in Conversation Coach.</div>';
+      return;
+    }
+
+    records.forEach(record=>{
+      const ref=referenceIndex[record.id]||{};
+      const metadata=record.metadata||{};
+      const transcript=ref.transcript||metadata.transcript||'No transcript was saved.';
+      const corrected=ref.corrected||'';
+      const mode=ref.mode||metadata.mode||'Conversation';
+      const retry=ref.retry!==undefined?ref.retry:!!metadata.retry;
+      const duration=ref.durationMs||metadata.durationMs||0;
+      const date=ref.turnDate||record.createdAt;
+      const url=URL.createObjectURL(record.blob);
+      recordingLibraryObjectUrls.push(url);
+      const expressionTags=(ref.expressions||[]).map(word=>`<span class="tag">${escapeHtml(word)}</span>`).join('');
+      const filename=buildRecordingFilename(record,ref);
+
+      cards.insertAdjacentHTML('beforeend',`
+        <div class="recording-card" id="recording-card-${record.id}">
+          <div class="recording-title">
+            <div>
+              <h3 style="margin:0">${escapeHtml(mode)}${retry?' · Retry':''}</h3>
+              <div class="muted">${new Date(date).toLocaleString()} · ${formatDuration(duration)} · ${formatBytes(record.blob.size)}</div>
+            </div>
+            <span class="feature-status working">Saved locally</span>
+          </div>
+          <audio controls preload="metadata" src="${url}"></audio>
+          <div class="transcript-box"><b>Transcript</b><br>${escapeHtml(transcript)}</div>
+          ${corrected?`<div class="corrected-box"><b>More natural version</b><br>${escapeHtml(corrected)}</div>`:''}
+          ${expressionTags?`<div style="margin-top:9px">${expressionTags}</div>`:''}
+          <div class="toolbar">
+            <button class="btn small" onclick="downloadRecording('${record.id}')">Download audio</button>
+            <button class="btn small secondary" onclick="toggleRecordingDelete('${record.id}')">Delete</button>
+          </div>
+          <div id="delete-recording-${record.id}"></div>
+          <span class="muted" style="font-size:11px">File: ${escapeHtml(filename)}</span>
+        </div>`);
+    });
+  }catch(error){
+    console.error(error);
+    content.innerHTML=`<div class="card"><h3>Could not load recordings</h3><p>${escapeHtml(error.message||String(error))}</p></div>`;
+  }
+}
+
+function buildRecordingFilename(record,ref={}){
+  const date=new Date(ref.turnDate||record.createdAt||Date.now()).toISOString().replace(/[:.]/g,'-');
+  const mode=safeFilePart(ref.mode||(record.metadata&&record.metadata.mode)||'conversation');
+  return `${date}_${mode}_${safeFilePart(record.id)}.${recordingExtension(record.mimeType||(record.blob&&record.blob.type)||'')}`;
+}
+
+async function downloadRecording(audioId){
+  try{
+    const record=await getAudioRecord(audioId);
+    if(!record){toast('Recording not found');return}
+    const ref=getAudioReferenceIndex()[audioId]||{};
+    downloadBlob(record.blob,buildRecordingFilename(record,ref));
+    toast('Recording downloaded');
+  }catch(error){
+    console.error(error);
+    toast('Could not download recording');
+  }
+}
+
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download=filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function toggleRecordingDelete(audioId){
+  document.querySelectorAll('[id^="delete-recording-"]').forEach(panel=>{
+    if(panel.id!==`delete-recording-${audioId}`)panel.innerHTML='';
+  });
+  const panel=document.getElementById(`delete-recording-${audioId}`);
+  if(!panel)return;
+  if(panel.innerHTML){panel.innerHTML='';return}
+  panel.innerHTML=`
+    <div class="danger-panel">
+      <b>Delete this recording?</b>
+      <p style="margin:6px 0">The transcript and correction remain, but the audio cannot be recovered.</p>
+      <div class="toolbar">
+        <button class="btn small" style="background:var(--danger)" onclick="confirmDeleteRecording('${audioId}')">Delete permanently</button>
+        <button class="btn small secondary" onclick="toggleRecordingDelete('${audioId}')">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function removeAudioReferences(audioId){
+  state.conversations.forEach(session=>{
+    (session.turns||[]).forEach(turn=>{
+      if(turn.audioId===audioId)turn.audioId=null;
+    });
+  });
+  Object.entries(vocabData).forEach(([word,data])=>{
+    let changed=false;
+    (data.sentenceHistory||[]).forEach(item=>{
+      if(item.audioId===audioId){item.audioId=null;changed=true}
+    });
+    if(changed)persistWord(word);
+  });
+}
+
+async function confirmDeleteRecording(audioId){
+  try{
+    await deleteAudioRecord(audioId);
+    removeAudioReferences(audioId);
+    logActivity('audio_deleted',{audioId});
+    saveState();
+    await renderRecordingLibrary();
+    toast('Recording deleted');
+  }catch(error){
+    console.error(error);
+    toast('Could not delete recording');
+  }
+}
+
+function toggleDeleteAllRecordings(){
+  const panel=document.getElementById('deleteAllRecordingsPanel');
+  if(!panel)return;
+  if(panel.innerHTML){panel.innerHTML='';return}
+  panel.innerHTML=`
+    <div class="danger-panel">
+      <b>Delete every saved recording?</b>
+      <p style="margin:6px 0">Conversation transcripts and corrections remain. All audio files will be removed from this browser.</p>
+      <div class="toolbar">
+        <button class="btn small" style="background:var(--danger)" onclick="confirmDeleteAllRecordings()">Delete all audio</button>
+        <button class="btn small secondary" onclick="toggleDeleteAllRecordings()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+async function confirmDeleteAllRecordings(){
+  try{
+    await clearAudioDB();
+    state.conversations.forEach(session=>(session.turns||[]).forEach(turn=>turn.audioId=null));
+    Object.entries(vocabData).forEach(([word,data])=>{
+      let changed=false;
+      (data.sentenceHistory||[]).forEach(item=>{if(item.audioId){item.audioId=null;changed=true}});
+      if(changed)persistWord(word);
+    });
+    logActivity('all_audio_deleted');
+    saveState();
+    await renderRecordingLibrary();
+    toast('All recordings deleted');
+  }catch(error){
+    console.error(error);
+    toast('Could not delete all recordings');
+  }
+}
+
+function crc32(bytes){
+  if(!crc32.table){
+    crc32.table=Array.from({length:256},(_,n)=>{
+      let c=n;
+      for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);
+      return c>>>0;
+    });
+  }
+  let crc=0xFFFFFFFF;
+  for(const byte of bytes)crc=crc32.table[(crc^byte)&0xFF]^(crc>>>8);
+  return (crc^0xFFFFFFFF)>>>0;
+}
+
+function setU16(view,offset,value){view.setUint16(offset,value,true)}
+function setU32(view,offset,value){view.setUint32(offset,value>>>0,true)}
+
+function zipDateTime(dateValue){
+  const date=new Date(dateValue||Date.now());
+  const year=Math.max(1980,date.getFullYear());
+  return {
+    time:(date.getHours()<<11)|(date.getMinutes()<<5)|Math.floor(date.getSeconds()/2),
+    date:((year-1980)<<9)|((date.getMonth()+1)<<5)|date.getDate()
+  };
+}
+
+async function createStoredZip(files){
+  const encoder=new TextEncoder();
+  const localParts=[];
+  const centralParts=[];
+  let offset=0;
+
+  for(const file of files){
+    const nameBytes=encoder.encode(file.name);
+    const dataBytes=file.data instanceof Blob
+      ?new Uint8Array(await file.data.arrayBuffer())
+      :file.data instanceof Uint8Array
+        ?file.data
+        :encoder.encode(String(file.data));
+    const crc=crc32(dataBytes);
+    const stamp=zipDateTime(file.date);
+    const localHeader=new Uint8Array(30);
+    const localView=new DataView(localHeader.buffer);
+    setU32(localView,0,0x04034b50);
+    setU16(localView,4,20);
+    setU16(localView,6,0x0800);
+    setU16(localView,8,0);
+    setU16(localView,10,stamp.time);
+    setU16(localView,12,stamp.date);
+    setU32(localView,14,crc);
+    setU32(localView,18,dataBytes.length);
+    setU32(localView,22,dataBytes.length);
+    setU16(localView,26,nameBytes.length);
+    setU16(localView,28,0);
+    localParts.push(localHeader,nameBytes,dataBytes);
+
+    const centralHeader=new Uint8Array(46);
+    const centralView=new DataView(centralHeader.buffer);
+    setU32(centralView,0,0x02014b50);
+    setU16(centralView,4,20);
+    setU16(centralView,6,20);
+    setU16(centralView,8,0x0800);
+    setU16(centralView,10,0);
+    setU16(centralView,12,stamp.time);
+    setU16(centralView,14,stamp.date);
+    setU32(centralView,16,crc);
+    setU32(centralView,20,dataBytes.length);
+    setU32(centralView,24,dataBytes.length);
+    setU16(centralView,28,nameBytes.length);
+    setU16(centralView,30,0);
+    setU16(centralView,32,0);
+    setU16(centralView,34,0);
+    setU16(centralView,36,0);
+    setU32(centralView,38,0);
+    setU32(centralView,42,offset);
+    centralParts.push(centralHeader,nameBytes);
+
+    offset+=localHeader.length+nameBytes.length+dataBytes.length;
+  }
+
+  const centralSize=centralParts.reduce((sum,part)=>sum+part.length,0);
+  const end=new Uint8Array(22);
+  const endView=new DataView(end.buffer);
+  setU32(endView,0,0x06054b50);
+  setU16(endView,4,0);
+  setU16(endView,6,0);
+  setU16(endView,8,files.length);
+  setU16(endView,10,files.length);
+  setU32(endView,12,centralSize);
+  setU32(endView,16,offset);
+  setU16(endView,20,0);
+
+  return new Blob([...localParts,...centralParts,end],{type:'application/zip'});
+}
+
+async function exportRecordingArchive(){
+  try{
+    const records=await getAllAudioRecords();
+    if(!records.length){toast('No recordings to export');return}
+    const refs=getAudioReferenceIndex();
+    const manifest={
+      product:'FluentLoop Local',
+      version:'1.2',
+      exportedAt:new Date().toISOString(),
+      recordingCount:records.length,
+      recordings:records.map(record=>{
+        const ref=refs[record.id]||{};
+        return {
+          id:record.id,
+          file:buildRecordingFilename(record,ref),
+          mimeType:record.mimeType||(record.blob&&record.blob.type)||'',
+          bytes:(record.blob&&record.blob.size)||0,
+          createdAt:record.createdAt,
+          metadata:record.metadata||{},
+          conversation:ref
+        };
+      })
+    };
+
+    const files=[
+      {name:'manifest.json',data:JSON.stringify(manifest,null,2),date:new Date()},
+      {name:'README.txt',data:'FluentLoop Recording Archive v1.2\n\nAudio files are stored in the recordings folder. Transcript and conversation metadata are in manifest.json.\n',date:new Date()}
+    ];
+
+    records.forEach(record=>{
+      const ref=refs[record.id]||{};
+      files.push({
+        name:`recordings/${buildRecordingFilename(record,ref)}`,
+        data:record.blob,
+        date:record.createdAt
+      });
+    });
+
+    toast('Building recording archive…');
+    const zip=await createStoredZip(files);
+    downloadBlob(zip,`fluentloop-recordings-${todayKey()}.zip`);
+    logActivity('recording_archive_exported',{count:records.length,bytes:zip.size});
+    saveState();
+    toast('Recording archive exported');
+  }catch(error){
+    console.error(error);
+    toast('Could not export recording archive');
+  }
+}
+
+async function renderStorageStatusPanel(){
+  const panel=document.getElementById('storageStatusPanel');
+  if(!panel)return;
+  try{
+    const audioStats=await getAudioStorageStats();
+    const estimate=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null;
+    const persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;
+    const used=estimate&&Number.isFinite(estimate.usage)?estimate.usage:audioStats.bytes;
+    const quota=estimate&&Number.isFinite(estimate.quota)?estimate.quota:null;
+    const percent=quota?Math.min(100,(used/quota)*100):0;
+    panel.innerHTML=`
+      <div class="conversation-stat"><span>Audio records</span><strong>${audioStats.count}</strong></div>
+      <div class="conversation-stat"><span>Audio size</span><strong>${formatBytes(audioStats.bytes)}</strong></div>
+      <div class="conversation-stat"><span>Browser storage</span><strong>${persisted===true?'Persistent':persisted===false?'Best effort':'Unknown'}</strong></div>
+      ${quota?`<div class="storage-meter"><span style="width:${Math.max(1,percent)}%"></span></div><div class="muted">${formatBytes(used)} used of approximately ${formatBytes(quota)}</div>`:''}
+      ${persisted===false&&navigator.storage&&navigator.storage.persist?`<button class="btn small secondary" style="margin-top:10px" onclick="requestPersistentStorage()">Request persistent storage</button>`:''}`;
+  }catch(error){
+    panel.innerHTML=`<span class="muted">Storage details unavailable: ${escapeHtml(error.message||String(error))}</span>`;
+  }
+}
+
+async function requestPersistentStorage(){
+  if(!(navigator.storage&&navigator.storage.persist)){toast('Persistent storage is not supported');return}
+  const granted=await navigator.storage.persist();
+  await renderStorageStatusPanel();
+  toast(granted?'Persistent storage granted':'Browser kept best-effort storage');
+}
+
 function renderProgress(){
   const root=document.getElementById('progressContent'); if(!root)return;
   const activeWords=Object.values(vocabData).filter(v=>v.status==='active').length;
@@ -1166,13 +1729,26 @@ async function runSelfTest(){
   const required=['today','learn','coach','library','progress','status','libraryContent','chatInput','holdToSpeakButton','recordingPreview'];const missing=required.filter(id=>!document.getElementById(id));results.push(['Required interface',missing.length===0,missing.length?'Missing: '+missing.join(', '):'All required elements found']);
   try{JSON.stringify(state);results.push(['Data schema',state.schemaVersion===2,'Schema version '+state.schemaVersion])}catch(e){results.push(['Data schema',false,e.message])}
   const media=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);results.push(['Microphone API',media,'Permission is only requested when you hold the recording button']);
-  try{const testBlob=new Blob(['fluentloop-audio-test'],{type:'audio/webm'});const id=await saveAudioBlob(testBlob,{test:true});const loaded=await getAudioRecord(id);const ok=!!(loaded&&loaded.blob&&loaded.blob.size===testBlob.size);await deleteAudioRecord(id);results.push(['IndexedDB audio',ok,ok?'Write, read and delete passed':'Stored blob did not match'])}catch(e){results.push(['IndexedDB audio',false,e.message])}
+  try{
+    const testBlob=new Blob(['fluentloop-audio-test'],{type:'audio/webm'});
+    const id=await saveAudioBlob(testBlob,{test:true,transcript:'self test'});
+    const loaded=await getAudioRecord(id);
+    const listed=await getAllAudioRecords();
+    const zip=await createStoredZip([{name:'test.txt',data:'ok',date:new Date()}]);
+    const ok=!!(loaded&&loaded.blob&&loaded.blob.size===testBlob.size&&listed.some(item=>item.id===id)&&zip.size>20);
+    await deleteAudioRecord(id);
+    results.push(['IndexedDB & archive',ok,ok?'Write, list, ZIP build and delete passed':'One recording operation failed']);
+  }catch(e){results.push(['IndexedDB & archive',false,e.message])}
   results.push(['Speech transcription',!!(window.SpeechRecognition||window.webkitSpeechRecognition),'Optional and browser-dependent']);results.push(['Question audio','speechSynthesis' in window,'Browser-dependent']);
   document.getElementById('selfTestResults').innerHTML=results.map(([name,ok,note])=>`<div class="test-result"><div><b>${name}</b><div class="muted">${note}</div></div><span class="feature-status ${ok?'working':'limited'}">${ok?'Pass':'Check'}</span></div>`).join('');renderStatusSummary();
 }
 
 async function renderStatusSummary(){
-  const el=document.getElementById('dataSummary');if(!el)return;const reviews=Object.values(state.words).reduce((n,w)=>n+(w.reviewCount||0),0);let audio='unknown';try{audio=await countAudioRecords()}catch(_){}el.textContent=`Saved locally: ${Object.keys(state.words).length} word records, ${reviews} reviews, ${state.writings.length} writings, ${state.conversations.length} conversations, ${audio} audio recordings. JSON export does not include audio in v1.1.`;
+  const el=document.getElementById('dataSummary');if(!el)return;
+  const reviews=Object.values(state.words).reduce((n,w)=>n+(w.reviewCount||0),0);
+  let audioCount='unknown',audioBytes=0;
+  try{const stats=await getAudioStorageStats();audioCount=stats.count;audioBytes=stats.bytes}catch(_){}
+  el.textContent=`Saved locally: ${Object.keys(state.words).length} word records, ${reviews} reviews, ${state.writings.length} writings, ${state.conversations.length} conversations, ${audioCount} audio recordings (${formatBytes(audioBytes)}). Text JSON and Recording Archive are exported separately.`;
 }
 function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -1190,6 +1766,7 @@ renderLookupList();
 renderLibrary('due');
 detectBrowserFeatures();
 renderStatusSummary();
+renderStorageStatusPanel();
 renderProgress();
 resetChat();
 </script>
