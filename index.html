@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FluentLoop Local — Working Build v1.2</title>
+  <title>FluentLoop Local — Working Build v1.3</title>
   <style>
     :root{
       --bg:#f5f7fb;
@@ -201,6 +201,27 @@
     .feature-status.working{background:var(--green-soft);color:var(--green)}
     .feature-status.limited{background:var(--amber-soft);color:var(--amber)}
     .feature-status.unavailable{background:var(--danger-soft);color:var(--danger)}
+    .feature-status.ai{background:#e9e8ff;color:#4842cc}
+    .feature-status.test{background:var(--amber-soft);color:var(--amber)}
+    .ai-source-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-left:6px}
+    .ai-source-badge.ai{background:#e9e8ff;color:#4842cc}
+    .ai-source-badge.test{background:var(--amber-soft);color:var(--amber)}
+    .ai-source-badge.local{background:#eef1f5;color:#5d6878}
+    .ai-warning{padding:12px 14px;border-radius:12px;background:var(--amber-soft);border:1px solid #efd79d;color:#674916;margin:10px 0}
+    .correction-item{padding:11px 12px;border-radius:11px;background:rgba(255,255,255,.62);margin:8px 0}
+    .correction-item .category{font-size:11px;font-weight:800;text-transform:uppercase;color:#697386}
+    .memory-card{border:1px solid var(--line);border-radius:15px;padding:15px;margin-bottom:11px;background:white}
+    .memory-card.mastered{opacity:.7;background:#f7faf8}
+    .memory-card .memory-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .memory-priority{font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px}
+    .memory-priority.high{background:var(--danger-soft);color:var(--danger)}
+    .memory-priority.medium{background:var(--amber-soft);color:var(--amber)}
+    .memory-priority.low{background:var(--green-soft);color:var(--green)}
+    .score-compare{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:12px 0}
+    .score-box{padding:12px;border-radius:12px;background:white;text-align:center;border:1px solid var(--line)}
+    .score-box strong{display:block;font-size:26px}
+    .loading-dots::after{content:'…';animation:loadingDots 1.2s steps(4,end) infinite}
+    @keyframes loadingDots{0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}
     .settings-row{display:grid;grid-template-columns:minmax(160px,.55fr) 1fr auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
     .settings-row:last-child{border-bottom:0}
     .inline-form{padding:16px;border:1px solid var(--line);background:#fafbfe;border-radius:14px;margin-bottom:14px}
@@ -241,7 +262,7 @@
       <button data-section="status">🛠 Status</button>
     </div>
     <div class="footer">
-      Working Build v1.2<br>
+      Working Build v1.3<br>
       B1 → B2 · Psychology · Daily Life · Business
     </div>
   </aside>
@@ -341,12 +362,15 @@
     <section id="coach" class="section">
       <div class="topbar">
         <div><h2>Conversation Coach</h2><p>按住錄音、放開停止；先播放自己的原始錄音，再確認 transcript 和送出。</p></div>
-        <select id="coachMode" onchange="resetChat()" style="padding:10px;border:1px solid var(--line);border-radius:12px">
-          <option>Topic conversation</option>
-          <option>Daily-life roleplay</option>
-          <option>Business conversation</option>
-          <option>Free conversation</option>
-        </select>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span id="coachAiBadge" class="feature-status limited">Checking AI…</span>
+          <select id="coachMode" onchange="resetChat()" style="padding:10px;border:1px solid var(--line);border-radius:12px">
+            <option>Topic conversation</option>
+            <option>Daily-life roleplay</option>
+            <option>Business conversation</option>
+            <option>Free conversation</option>
+          </select>
+        </div>
       </div>
 
       <div class="grid grid-2">
@@ -413,6 +437,10 @@
             <p style="margin:6px 0 0">完成一段後才糾正；最多顯示三個重要問題。</p>
           </div>
           <div class="vocab-item">
+            <b>Feedback engine</b>
+            <p id="feedbackEngineText" style="margin:6px 0 0">Checking local AI server…</p>
+          </div>
+          <div class="vocab-item">
             <b>Current session</b>
             <div class="conversation-stat"><span>Paragraphs</span><strong id="conversationTurns">0</strong></div>
             <div class="conversation-stat"><span>Retries</span><strong id="conversationRetries">0</strong></div>
@@ -450,6 +478,7 @@
         <button onclick="showLibraryTab('passive',this)">Passive exposure</button>
         <button onclick="showLibraryTab('writing',this)">Writing history</button>
         <button onclick="showLibraryTab('recordings',this)">Recordings</button>
+        <button onclick="showLibraryTab('memory',this)">Learning memory</button>
       </div>
       <div id="libraryContent"></div>
     </section>
@@ -465,7 +494,7 @@
     <section id="status" class="section">
       <div class="topbar">
         <div><h2>System Status & Data</h2><p>Use this page to distinguish a working feature, a browser limitation, and a feature that has not been connected yet.</p></div>
-        <span class="feature-status working">Working Build v1.2</span>
+        <span class="feature-status working">Working Build v1.3</span>
       </div>
 
       <div class="grid grid-2">
@@ -473,21 +502,26 @@
           <h3>Feature status</h3>
           <div class="settings-row"><b>Vocabulary & spaced review</b><span>Local storage, review history and due dates</span><span class="feature-status working">Working</span></div>
           <div class="settings-row"><b>Reading & word lookup</b><span>Included article and contextual word cards</span><span class="feature-status working">Working</span></div>
-          <div class="settings-row"><b>Conversation feedback</b><span>Local grammar rules; not full semantic AI</span><span class="feature-status limited">Rule-based</span></div>
+          <div class="settings-row"><b>AI conversation & sentence feedback</b><span id="aiStatusText">Checking secure local backend…</span><span id="aiStatusBadge" class="feature-status limited">Checking</span></div>
+          <div class="settings-row"><b>Local fallback feedback</b><span>Used only when the AI backend is unavailable; clearly labelled in each result</span><span class="feature-status working">Working</span></div>
+          <div class="settings-row"><b>Learning memory</b><span>Stores repeated error patterns, examples, priority and mastery state</span><span class="feature-status working">Working</span></div>
           <div class="settings-row"><b>Writing feedback</b><span>Local word-count and selected grammar rules</span><span class="feature-status limited">Rule-based</span></div>
           <div class="settings-row"><b>Microphone recording</b><span id="recordStatusText">Checking MediaRecorder support…</span><span id="recordStatusBadge" class="feature-status limited">Checking</span></div>
           <div class="settings-row"><b>Local audio storage</b><span id="audioStoreStatusText">Checking IndexedDB support…</span><span id="audioStoreStatusBadge" class="feature-status limited">Checking</span></div>
           <div class="settings-row"><b>Recording Library</b><span>Play, download, export and delete saved recordings</span><span class="feature-status working">Working</span></div>
           <div class="settings-row"><b>Speech transcription</b><span id="speechStatusText">Checking browser support…</span><span id="speechStatusBadge" class="feature-status limited">Checking</span></div>
-          <div class="settings-row"><b>Question audio</b><span id="ttsStatusText">Checking browser support…</span><span id="ttsStatusBadge" class="feature-status limited">Checking</span></div>
-          <div class="settings-row"><b>Cloud AI understanding</b><span>Requires a secure backend; no API key is stored here</span><span class="feature-status unavailable">Not connected</span></div>
+          <div class="settings-row"><b>AI key security</b><span>The API key stays in the Node server environment and is never stored in the browser</span><span class="feature-status working">Server-side</span></div>
           <div class="settings-row"><b>Cloud sync/account</b><span>Data currently stays in this browser only</span><span class="feature-status unavailable">Not connected</span></div>
         </div>
 
         <div class="card">
           <h3>Self-test</h3>
           <p>Run this after opening the app on a new browser or device.</p>
-          <button class="btn" onclick="runSelfTest()">Run self-test</button>
+          <div class="toolbar">
+            <button class="btn" onclick="runSelfTest()">Run self-test</button>
+            <button class="btn secondary" onclick="checkAIHealth(true)">Check AI connection</button>
+          </div>
+          <div id="aiConnectionDetails" class="muted" style="margin-top:12px"></div>
           <div id="selfTestResults" style="margin-top:14px"></div>
         </div>
       </div>
@@ -606,16 +640,17 @@ const todayKey=()=>new Date().toISOString().slice(0,10);
 const addDays=(dateString,days)=>{const d=new Date(dateString||Date.now());d.setDate(d.getDate()+days);return d.toISOString()};
 
 const emptyState=()=>({
-  schemaVersion:2,
+  schemaVersion:3,
   currentDay:todayKey(),
   lookups:[], completed:[], minutes:0, words:{}, customWords:{}, writings:[],
-  conversations:[], laterQuestions:[], readingSessions:[], activityDates:[], eventLog:[]
+  conversations:[], laterQuestions:[], readingSessions:[], activityDates:[], eventLog:[],
+  learningMemory:[], aiUsage:{requests:0,successes:0,fallbacks:0,lastSource:null,lastModel:null,lastError:null}
 });
 
 function loadState(){
   try{
     const stored=JSON.parse(localStorage.getItem(STATE_KEY)||"null");
-    if(stored && (stored.schemaVersion===1 || stored.schemaVersion===2)) return {...emptyState(),...stored,schemaVersion:2};
+    if(stored && [1,2,3].includes(stored.schemaVersion)) return {...emptyState(),...stored,schemaVersion:3};
     return emptyState();
   }catch(error){
     console.error("State load failed",error);
@@ -635,6 +670,8 @@ state.customWords=state.customWords||{};
 state.readingSessions=state.readingSessions||[];
 state.activityDates=state.activityDates||[];
 state.eventLog=state.eventLog||[];
+state.learningMemory=Array.isArray(state.learningMemory)?state.learningMemory:[];
+state.aiUsage={...emptyState().aiUsage,...(state.aiUsage||{})};
 
 
 function applyStoredWords(){
@@ -1011,48 +1048,199 @@ function startParallelTranscription(){
 }
 function stopParallelTranscription(){if(speechRecognition){try{speechRecognition.stop()}catch(_){}speechRecognition=null}}
 
+let aiHealth={connected:false,mode:'offline',provider:'offline',model:null,message:'AI status has not been checked.',checkedAt:null};
+
+function sourceLabel(source){return source==='ai'?'AI feedback':source==='test'?'Test feedback':'Local fallback'}
+function sourceClass(source){return source==='ai'?'ai':source==='test'?'test':'local'}
+
+function updateAIStatusUI(){
+  const connected=aiHealth.connected;
+  const badge=document.getElementById('aiStatusBadge');
+  const text=document.getElementById('aiStatusText');
+  const coachBadge=document.getElementById('coachAiBadge');
+  const engine=document.getElementById('feedbackEngineText');
+  const details=document.getElementById('aiConnectionDetails');
+  const label=aiHealth.mode==='ai'?'AI connected':aiHealth.mode==='test'?'Test mode':'Local fallback';
+  const cls=aiHealth.mode==='ai'?'ai':aiHealth.mode==='test'?'test':'limited';
+  if(badge){badge.className=`feature-status ${cls}`;badge.textContent=label}
+  if(text)text.textContent=aiHealth.message||label;
+  if(coachBadge){coachBadge.className=`feature-status ${cls}`;coachBadge.textContent=label}
+  if(engine)engine.textContent=aiHealth.mode==='ai'
+    ?`${aiHealth.provider} · ${aiHealth.model}`
+    :aiHealth.mode==='test'
+      ?'Deterministic test mode — not semantic AI'
+      :'Local rule-based fallback; start server.mjs with an AI provider for semantic feedback.';
+  if(details)details.textContent=`Mode: ${aiHealth.mode} · Provider: ${aiHealth.provider} · Model: ${aiHealth.model||'none'} · ${aiHealth.message||''}`;
+}
+
+async function checkAIHealth(showToast=false){
+  try{
+    const response=await fetch('/api/health',{cache:'no-store'});
+    if(!response.ok)throw new Error(`Health check returned ${response.status}`);
+    const data=await response.json();
+    aiHealth={...data,checkedAt:new Date().toISOString()};
+  }catch(error){
+    aiHealth={connected:false,mode:'offline',provider:'offline',model:null,message:location.protocol==='file:'?'Open the app through node server.mjs to enable AI.':'AI server unavailable; local fallback will be used.',checkedAt:new Date().toISOString(),error:error.message};
+  }
+  updateAIStatusUI();
+  if(showToast)toast(aiHealth.mode==='ai'?'AI connection is working':aiHealth.mode==='test'?'Test feedback server is working':'AI is not connected; local fallback remains available');
+  return aiHealth;
+}
+
+async function requestAIFeedback(task,payload){
+  state.aiUsage.requests++;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const response=await fetch('/api/feedback',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task,payload}),
+      signal:controller.signal
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||`AI request returned ${response.status}`);
+    const feedback=normalizeFeedback(data.feedback,{source:data.source||'ai',provider:data.provider||'unknown',model:data.model||null});
+    state.aiUsage.successes++;
+    state.aiUsage.lastSource=feedback.source;
+    state.aiUsage.lastModel=feedback.model;
+    state.aiUsage.lastError=null;
+    saveState();
+    return feedback;
+  }finally{clearTimeout(timer)}
+}
+
+function normalizeFeedback(raw={},meta={}){
+  const corrections=(raw.corrections||[]).slice(0,3).map(item=>typeof item==='string'
+    ?{category:'Language point',original:'',correction:'',explanation:item,severity:'important'}
+    :{category:item.category||'Language point',original:item.original||'',correction:item.correction||'',explanation:item.explanation||'',severity:item.severity||'important'});
+  const targetExpressions=(raw.targetExpressions||[]).map(item=>({expression:item.expression||'',usedCorrectly:!!item.usedCorrectly,note:item.note||''}));
+  return {
+    kind:raw.kind||'conversation',
+    contentResponse:raw.coachResponse||raw.contentResponse||'Your response was saved.',
+    coachResponse:raw.coachResponse||raw.contentResponse||'Your response was saved.',
+    natural:raw.naturalVersion||raw.natural||'',
+    naturalVersion:raw.naturalVersion||raw.natural||'',
+    corrections,
+    strengths:Array.isArray(raw.strengths)?raw.strengths:[],
+    targetExpressions,
+    targets:targetExpressions.filter(item=>item.usedCorrectly).map(item=>item.expression),
+    followUpQuestion:raw.followUpQuestion||'',
+    memoryItems:Array.isArray(raw.memoryItems)?raw.memoryItems:[],
+    retryComparison:raw.retryComparison||{summary:'',improved:[],stillReview:[],scoreBefore:0,scoreAfter:0},
+    expressionUsage:raw.expressionUsage||{expression:'',usedCorrectly:false,note:''},
+    source:meta.source||raw.source||'local',
+    provider:meta.provider||raw.provider||'local',
+    model:meta.model||raw.model||null
+  };
+}
+
+function localFeedback(text,isRetry=false,expression=''){
+  let corrections=[];let natural=(text||'').trim();const lower=natural.toLowerCase();const targets=[];
+  ['put off','overwhelmed','get started'].forEach(target=>{if(lower.includes(target))targets.push(target)});
+  if(!natural)natural='Transcript not available. Add a transcript for text feedback.';
+  if(/\bneed (?!to\b)/i.test(natural)){corrections.push({category:'Verb pattern',original:'need + verb',correction:'need to + verb',explanation:'need 後面接動詞時使用 need to + 原形動詞。',severity:'important'});natural=natural.replace(/\bneed ([a-z]+)/i,'need to $1')}
+  if(/\bwant (?!to\b)/i.test(natural)){corrections.push({category:'Verb pattern',original:'want + verb',correction:'want to + verb',explanation:'want 後面接動詞時使用 want to + 原形動詞。',severity:'important'});natural=natural.replace(/\bwant ([a-z]+)/i,'want to $1')}
+  if(/\bit is emotional problem\b/i.test(natural)){corrections.push({category:'Article',original:'emotional problem',correction:'an emotional problem',explanation:'單數可數名詞 problem 前需要冠詞。',severity:'important'});natural=natural.replace(/it is emotional problem/i,'it is an emotional problem')}
+  if(/\bmany works\b/i.test(natural)){corrections.push({category:'Countability',original:'many works',correction:'a lot of work',explanation:'一般工作量的 work 通常不可數。',severity:'important'});natural=natural.replace(/\bmany works\b/i,'a lot of work')}
+  if(natural&&!/[.!?]$/.test(natural))natural+='.';
+  const memoryItems=corrections.map(c=>({category:c.category,pattern:`${c.original} → ${c.correction}`,explanation:c.explanation,example:natural,priority:c.severity==='important'?'high':'medium'}));
+  state.aiUsage.fallbacks++;state.aiUsage.lastSource='local';saveState();
+  return normalizeFeedback({
+    kind:isRetry?'retry':expression?'sentence':'conversation',
+    coachResponse:isRetry?'The retry was saved. Local rules can compare only a few known grammar patterns.':'Your main idea is understandable. Semantic AI is not connected, so this result uses limited local rules.',
+    naturalVersion:natural,
+    corrections:corrections.slice(0,3),
+    strengths:text?['You completed a full idea.']:[],
+    targetExpressions:['put off','overwhelmed','get started'].map(target=>({expression:target,usedCorrectly:targets.includes(target),note:targets.includes(target)?'Found in transcript.':'Not used.'})),
+    followUpQuestion:'Can you give a specific example from your own experience?',
+    memoryItems,
+    retryComparison:{summary:isRetry?'Your second attempt was saved for comparison.':'',improved:isRetry?['Completed a second attempt.']:[],stillReview:isRetry?corrections.map(c=>c.category):[],scoreBefore:isRetry?60:0,scoreAfter:isRetry?Math.max(62,76-corrections.length*5):0},
+    expressionUsage:{expression,usedCorrectly:expression?lower.includes(expression.toLowerCase().split(/\s+/)[0]):false,note:'Checked by local fallback rules.'}
+  },{source:'local',provider:'local',model:null});
+}
+
+async function analyzeConversationFeedback(text,isRetry,sourceTurn){
+  const payload={
+    level:'B1 moving toward B2',
+    mode:document.getElementById('coachMode').value,
+    question:lastQuestion,
+    text,
+    targetExpressions:['put off','overwhelmed','get started'],
+    previousTurns:conversationSession.turns.slice(-4).map(turn=>({text:turn.text,retry:turn.retry,natural:turn.natural})),
+    originalText:sourceTurn?sourceTurn.text:'',
+    originalFeedback:sourceTurn?sourceTurn.feedback||null:null
+  };
+  if(aiHealth.connected){
+    try{return await requestAIFeedback(isRetry?'retry':'conversation',payload)}
+    catch(error){state.aiUsage.lastError=error.message;saveState();toast('AI feedback unavailable. Saved your response and used local fallback.')}
+  }
+  return localFeedback(text,isRetry);
+}
+
+async function analyzeSentenceFeedback(expression,sentence){
+  if(aiHealth.connected){
+    try{return await requestAIFeedback('sentence',{level:'B1 moving toward B2',expression,sentence})}
+    catch(error){state.aiUsage.lastError=error.message;saveState();toast('AI sentence feedback unavailable. Used local fallback.')}
+  }
+  return localFeedback(sentence,false,expression);
+}
+
+function updateLearningMemory(items=[],context={}){
+  const now=new Date().toISOString();
+  items.forEach(item=>{
+    if(!item||!item.category||!item.pattern)return;
+    const key=`${item.category}|${item.pattern}`.toLowerCase().replace(/\s+/g,' ').trim();
+    let existing=state.learningMemory.find(memory=>memory.key===key);
+    if(!existing){
+      existing={id:createId('memory'),key,category:item.category,pattern:item.pattern,explanation:item.explanation||'',priority:item.priority||'medium',count:0,firstSeen:now,lastSeen:now,status:'active',examples:[],sources:[]};
+      state.learningMemory.push(existing);
+    }
+    existing.count++;
+    existing.lastSeen=now;
+    existing.explanation=item.explanation||existing.explanation;
+    existing.priority=item.priority||existing.priority;
+    if(item.example&&!existing.examples.includes(item.example))existing.examples.unshift(item.example);
+    existing.examples=existing.examples.slice(0,5);
+    const source=context.source||'Practice';
+    if(!existing.sources.includes(source))existing.sources.push(source);
+    if(existing.status==='mastered'&&existing.count>1)existing.status='active';
+  });
+  if(items.length){logActivity('learning_memory_updated',{count:items.length,source:context.source||'unknown'});saveState()}
+}
+
 async function sendChat(){
   const input=document.getElementById('chatInput');const text=input.value.trim();
   if(!text&&!currentRecording){toast('Record or type a response first');return}
-  const sendButton=document.getElementById('sendParagraphButton');sendButton.disabled=true;sendButton.textContent='Saving…';
-  const isRetry=awaitingRetry;
-  const retryOfTurnId=isRetry?retrySourceTurnId:null;
+  const sendButton=document.getElementById('sendParagraphButton');sendButton.disabled=true;sendButton.textContent=currentRecording?'Saving audio…':'Analyzing…';
+  const isRetry=awaitingRetry;const retryOfTurnId=isRetry?retrySourceTurnId:null;
+  const sourceTurn=isRetry?conversationSession.turns.find(turn=>turn.id===retryOfTurnId):null;
   let audioId=null,audioUrl=null,durationMs=0;
   try{
     if(currentRecording){
-      audioId=await saveAudioBlob(currentRecording.blob,{
-        source:'conversation',
-        mode:document.getElementById('coachMode').value,
-        durationMs:currentRecording.durationMs,
-        transcript:text,
-        retry:isRetry,
-        retryOfTurnId,
-        question:lastQuestion
-      });
+      audioId=await saveAudioBlob(currentRecording.blob,{source:'conversation',mode:document.getElementById('coachMode').value,durationMs:currentRecording.durationMs,transcript:text,retry:isRetry,retryOfTurnId,question:lastQuestion});
       currentRecording.audioId=audioId;audioUrl=currentRecording.url;durationMs=currentRecording.durationMs;sessionObjectUrls.push(audioUrl);conversationSession.recordingCount++;
     }
-    const analysis=analyzeChatText(text,isRetry);
-    const turn={id:createId('turn'),text,retry:isRetry,retryOfTurnId,natural:analysis.natural,corrections:analysis.corrections,targets:analysis.targets,audioId,durationMs,at:new Date().toISOString()};
+    sendButton.textContent='Analyzing…';
+    const analysis=await analyzeConversationFeedback(text,isRetry,sourceTurn);
+    const turn={id:createId('turn'),text,retry:isRetry,retryOfTurnId,natural:analysis.natural,corrections:analysis.corrections,targets:analysis.targets,audioId,durationMs,at:new Date().toISOString(),feedback:analysis,feedbackSource:analysis.source};
     conversationSession.turns.push(turn);if(isRetry)conversationSession.retries++;
     analysis.corrections.forEach(c=>conversationSession.corrections.push(c));analysis.targets.forEach(t=>conversationSession.usedTargets.add(t));
+    updateLearningMemory(analysis.memoryItems,{source:isRetry?'Conversation retry':'Conversation'});
     saveConversationSentenceHistory(turn);
     appendBubble(text,'user',isRetry,audioUrl,durationMs);
     input.value='';currentRecording=null;renderRecordingPreview();
     if(isRetry)clearRetryMode();
     updateConversationStats();updateTargetChips();
-    setTimeout(()=>{
-      appendCoachFeedback(analysis,turn.id);
-      if(!isRetry){
-        const config=currentConversationConfig();
-        const next=config.follow[Math.min(chatStep,config.follow.length-1)];
-        lastQuestion=next;
-        appendBubble(next,'ai');
-        chatStep++;
-      }
-      completeTask('conversation');
-    },200);
-  }catch(error){console.error(error);toast('Could not save the recording. Check System Status.');}
-  finally{sendButton.disabled=false;sendButton.textContent='Send response'}
+    appendCoachFeedback(analysis,turn.id,isRetry);
+    if(!isRetry){
+      const config=currentConversationConfig();
+      const next=analysis.followUpQuestion||config.follow[Math.min(chatStep,config.follow.length-1)];
+      lastQuestion=next;appendBubble(next,'ai');chatStep++;
+    }
+    completeTask('conversation');
+  }catch(error){console.error(error);toast('Could not save or analyze the response. Check System Status.');}
+  finally{sendButton.disabled=false;sendButton.textContent=awaitingRetry?'Send retry':'Send response'}
 }
 
 function appendBubble(text,type,isRetry=false,audioUrl=null,durationMs=0){
@@ -1062,36 +1250,28 @@ function appendBubble(text,type,isRetry=false,audioUrl=null,durationMs=0){
   chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
 }
 
-function appendCoachFeedback(analysis,turnId){
+function appendCoachFeedback(analysis,turnId,isRetry=false){
   const chat=document.getElementById('chat');const div=document.createElement('div');div.className='feedback';
-  const correctionHtml=analysis.corrections.length?analysis.corrections.map(c=>`• ${c}`).join('<br>'):'No major grammar issue detected by the local rules.';
-  div.innerHTML=`<h4>Coach response</h4><p>${analysis.contentResponse}</p><p><b>More natural version</b><br>${escapeHtml(analysis.natural)}</p><p><b>Important language points</b><br>${correctionHtml}</p>${analysis.targets.length?`<p><b>Target used:</b> ${analysis.targets.join(', ')}</p>`:''}<div class="toolbar"><button id="retry-button-${turnId}" class="btn small secondary retry-action" aria-pressed="false" onclick="prepareRetry('${turnId}',this)">Say it again</button></div>`;
+  const correctionHtml=analysis.corrections.length
+    ?analysis.corrections.map(c=>`<div class="correction-item"><div class="category">${escapeHtml(c.category)} · ${escapeHtml(c.severity)}</div>${c.original||c.correction?`<div><b>${escapeHtml(c.original||'')}</b>${c.correction?` → <b>${escapeHtml(c.correction)}</b>`:''}</div>`:''}<div>${escapeHtml(c.explanation)}</div></div>`).join('')
+    :'<div class="correction-item">No important correction was identified.</div>';
+  const strengths=analysis.strengths.length?`<p><b>Strengths</b><br>${analysis.strengths.map(item=>`✓ ${escapeHtml(item)}`).join('<br>')}</p>`:'';
+  const targetHtml=analysis.targetExpressions.filter(item=>item.usedCorrectly).length?`<p><b>Target used:</b> ${analysis.targetExpressions.filter(item=>item.usedCorrectly).map(item=>escapeHtml(item.expression)).join(', ')}</p>`:'';
+  let retryHtml='';
+  if(isRetry&&analysis.retryComparison){
+    const compare=analysis.retryComparison;
+    retryHtml=`<div class="inline-coach-panel"><h4>Retry comparison</h4><p>${escapeHtml(compare.summary||'Your retry was saved.')}</p><div class="score-compare"><div class="score-box"><span>Before</span><strong>${Number(compare.scoreBefore)||0}</strong></div><b>→</b><div class="score-box"><span>After</span><strong>${Number(compare.scoreAfter)||0}</strong></div></div>${(compare.improved||[]).length?`<p><b>Improved</b><br>${compare.improved.map(item=>`✓ ${escapeHtml(item)}`).join('<br>')}</p>`:''}${(compare.stillReview||[]).length?`<p><b>Still review</b><br>${compare.stillReview.map(item=>`• ${escapeHtml(item)}`).join('<br>')}</p>`:''}</div>`;
+  }
+  div.innerHTML=`<h4>Coach response <span class="ai-source-badge ${sourceClass(analysis.source)}">${sourceLabel(analysis.source)}</span></h4>${analysis.source==='local'?'<div class="ai-warning">AI was not connected for this turn. Recording and transcript were saved; the feedback below uses limited local rules.</div>':''}<p>${escapeHtml(analysis.contentResponse)}</p>${strengths}<p><b>More natural version</b><br>${escapeHtml(analysis.natural)}</p><div><b>Important language points</b>${correctionHtml}</div>${targetHtml}${retryHtml}<div class="toolbar"><button id="retry-button-${turnId}" class="btn small secondary retry-action" aria-pressed="false" onclick="prepareRetry('${turnId}',this)">Say it again</button></div>`;
   chat.appendChild(div);chat.scrollTop=chat.scrollHeight;
-}
-
-function analyzeChatText(text,isRetry=false){
-  let corrections=[];let natural=(text||'').trim();const lower=natural.toLowerCase();const targets=[];
-  if(lower.includes('put off')||lower.includes('putting off'))targets.push('put off');
-  if(lower.includes('overwhelmed')||lower.includes('overwhelming'))targets.push('overwhelmed');
-  if(lower.includes('get started')||lower.includes('getting started'))targets.push('get started');
-  if(!natural){return {natural:'Transcript not available. Play the recording and add a transcript for grammar feedback.',corrections:['Add or edit the transcript to receive text-based feedback.'],targets,contentResponse:'Your recording was saved. Text analysis needs a transcript.'}}
-  if(/\bneed (?!to\b)/i.test(natural)){corrections.push('Use <b>need to + verb</b>.');natural=natural.replace(/\bneed ([a-z]+)/i,'need to $1')}
-  if(/\bwant (?!to\b)/i.test(natural)){corrections.push('Use <b>want to + verb</b>.');natural=natural.replace(/\bwant ([a-z]+)/i,'want to $1')}
-  if(/\bit is emotional problem\b/i.test(natural)){corrections.push('Use an article: <b>an emotional problem</b>.');natural=natural.replace(/it is emotional problem/i,'it is an emotional problem')}
-  if(/\bmany works\b/i.test(natural)){corrections.push('Use <b>a lot of work</b>; “work” is usually uncountable here.');natural=natural.replace(/\bmany works\b/i,'a lot of work')}
-  if(!/[.!?]$/.test(natural))natural+='.';corrections=corrections.slice(0,3);
-  let contentResponse='Your point is understandable.';
-  if(/emotional|anxious|stress|overwhel/i.test(lower))contentResponse='That is a strong point. People may understand a deadline clearly but still avoid a task because it creates stress or anxiety.';
-  else if(/time|schedule|plan/i.test(lower))contentResponse='That makes sense. Poor planning can increase procrastination, especially when a large task has no clear first step.';
-  else if(isRetry)contentResponse='The second attempt is useful because it lets you compare both the language and the original recording.';
-  return {natural,corrections,targets,contentResponse};
 }
 
 function saveConversationSentenceHistory(turn){
   turn.targets.forEach(word=>{
-    const d=vocabData[word];if(!d)return;d.sentenceHistory=Array.isArray(d.sentenceHistory)?d.sentenceHistory:[];
+    const resolvedWord=vocabData[word]?word:(word==='overwhelmed'&&vocabData['overwhelming']?'overwhelming':word);
+    const d=vocabData[resolvedWord];if(!d)return;d.sentenceHistory=Array.isArray(d.sentenceHistory)?d.sentenceHistory:[];
     d.sentenceHistory.unshift({id:createId('sentence'),original:turn.text||'(Audio response without transcript)',corrected:turn.natural,date:turn.at,source:'Conversation',audioId:turn.audioId});
-    if(d.sentenceHistory.length>50)d.sentenceHistory=d.sentenceHistory.slice(0,50);persistWord(word);
+    if(d.sentenceHistory.length>50)d.sentenceHistory=d.sentenceHistory.slice(0,50);persistWord(resolvedWord);
   });
   saveState();
 }
@@ -1173,7 +1353,7 @@ function updateConversationStats(){document.getElementById('conversationTurns').
 
 async function endConversationSession(){
   const summary=document.getElementById('conversationSummary');if(!conversationSession.turns.length){toast('Complete at least one response first');return}
-  const common=[...new Set(conversationSession.corrections)].slice(0,3);const targets=[...conversationSession.usedTargets];
+  const common=[...new Map(conversationSession.corrections.map(item=>{const label=typeof item==='string'?item:`${item.category}: ${item.correction||item.pattern||item.explanation}`;return [label,label]})).values()].slice(0,3);const targets=[...conversationSession.usedTargets];
   const record={id:createId('conversation'),date:new Date().toISOString(),mode:document.getElementById('coachMode').value,turns:conversationSession.turns,retries:conversationSession.retries,targets};
   state.conversations.push(record);logActivity('conversation_saved',{turns:record.turns.length,mode:record.mode,recordings:conversationSession.recordingCount});saveState();
   summary.classList.remove('hidden');summary.innerHTML=`<h3>Conversation session summary</h3><div class="grid grid-3"><div><p>Original responses</p><h3>${conversationSession.turns.filter(t=>!t.retry).length}</h3></div><div><p>Retries</p><h3>${conversationSession.retries}</h3></div><div><p>Recordings</p><h3>${conversationSession.recordingCount}</h3></div></div><p><b>Successfully used:</b> ${targets.length?targets.join(', '):'No target expression yet'}</p><p><b>Review next:</b> ${common.length?common.join('<br>'):'Use a wider range of linking expressions.'}</p><h4>Your recordings</h4><div id="sessionRecordingList"></div><div class="toolbar"><button class="btn small" onclick="resetChat()">Start another conversation</button><button class="btn small secondary" onclick="switchSection('progress')">View progress</button></div>`;
@@ -1197,6 +1377,7 @@ function showLibraryTab(type,btn){
 function renderLibrary(type='due'){
   const content=document.getElementById('libraryContent');
   if(type==='recordings'){renderRecordingLibrary();return}
+  if(type==='memory'){renderLearningMemory();return}
   if(type==='writing'){
     if(!state.writings.length){content.innerHTML='<div class="card"><p>No writing saved yet. Complete today’s short writing to create your first comparison.</p></div>';return}
     content.innerHTML=state.writings.map((w,i)=>`<div class="card"><h3>Writing ${i+1}</h3><p>${escapeHtml(w.text)}</p><span class="tag green">${w.date}</span></div>`).join('');return;
@@ -1225,12 +1406,22 @@ function renderSentenceHistory(word,encodedWord,panel){
 
 function scheduleWordReview(word,quality){const d=vocabData[word];d.reviewCount=(d.reviewCount||0)+1;const intervals=quality>=3?[3,7,14,30,60]:quality===2?[1,3,7,14,30]:[1,1,2,3,7];const days=intervals[Math.min(d.reviewCount-1,intervals.length-1)];d.dueAt=addDays(new Date().toISOString(),days);d.lastReviewed=new Date().toISOString();persistWord(word);logActivity('word_review',{word,quality,nextDays:days});return days}
 
-function checkInlineSentence(encodedWord){
-  const word=decodeURIComponent(encodedWord),d=vocabData[word],input=document.getElementById(`sentence-input-${encodedWord}`),feedback=document.getElementById(`feedback-${encodedWord}`),sentence=input.value.trim();if(!sentence){toast('Write a sentence first');return}
-  const analysis=analyzeChatText(sentence,false);const hasEnough=sentence.split(/\s+/).length>=5;const appears=sentence.toLowerCase().includes(word.toLowerCase().split(/\s+/)[0]);const success=hasEnough&&appears;
-  d.strength=Math.min(100,d.strength+(success?12:5));d.lastSentence=sentence;d.sentenceHistory=Array.isArray(d.sentenceHistory)?d.sentenceHistory:[];d.sentenceHistory.unshift({id:createId('sentence'),original:sentence,corrected:analysis.natural,date:new Date().toISOString(),source:'Sentence practice',audioId:null});if(d.sentenceHistory.length>50)d.sentenceHistory=d.sentenceHistory.slice(0,50);
-  const days=scheduleWordReview(word,success?3:1);persistWord(word);saveState();
-  feedback.innerHTML=`<div class="practice-feedback"><b>Sentence saved</b><p style="margin:7px 0"><b>Original:</b> ${escapeHtml(sentence)}</p><p style="margin:7px 0"><b>Corrected / natural:</b> ${escapeHtml(analysis.natural)}</p><p style="margin:7px 0">${analysis.corrections.length?analysis.corrections.join('<br>'):'No major issue detected by the local rules.'}</p><p style="margin:7px 0"><b>Next scheduled review:</b> ${days} day${days>1?'s':''}</p><button class="btn small secondary" onclick="togglePractice('${encodedWord}','review')">Open sentence history</button></div>`;
+async function checkInlineSentence(encodedWord){
+  const word=decodeURIComponent(encodedWord),d=vocabData[word],input=document.getElementById(`sentence-input-${encodedWord}`),feedback=document.getElementById(`feedback-${encodedWord}`),sentence=input.value.trim();
+  if(!sentence){toast('Write a sentence first');return}
+  const button=input.parentElement.querySelector('button.btn');button.disabled=true;button.textContent='Analyzing…';
+  try{
+    const analysis=await analyzeSentenceFeedback(word,sentence);
+    const hasEnough=sentence.split(/\s+/).length>=5;
+    const success=hasEnough&&analysis.expressionUsage.usedCorrectly;
+    d.strength=Math.min(100,d.strength+(success?12:5));d.lastSentence=sentence;d.sentenceHistory=Array.isArray(d.sentenceHistory)?d.sentenceHistory:[];
+    d.sentenceHistory.unshift({id:createId('sentence'),original:sentence,corrected:analysis.natural,date:new Date().toISOString(),source:analysis.source==='ai'?'AI sentence practice':analysis.source==='test'?'Test sentence practice':'Local sentence practice',audioId:null,feedbackSource:analysis.source,corrections:analysis.corrections});
+    if(d.sentenceHistory.length>50)d.sentenceHistory=d.sentenceHistory.slice(0,50);
+    const days=scheduleWordReview(word,success?3:1);persistWord(word);updateLearningMemory(analysis.memoryItems,{source:'Sentence practice'});saveState();
+    const corrections=analysis.corrections.length?analysis.corrections.map(c=>`<div class="correction-item"><div class="category">${escapeHtml(c.category)}</div>${c.original||c.correction?`<div><b>${escapeHtml(c.original||'')}</b>${c.correction?` → <b>${escapeHtml(c.correction)}</b>`:''}</div>`:''}<div>${escapeHtml(c.explanation)}</div></div>`).join(''):'<div class="correction-item">No important correction was identified.</div>';
+    feedback.innerHTML=`<div class="practice-feedback"><b>Sentence saved <span class="ai-source-badge ${sourceClass(analysis.source)}">${sourceLabel(analysis.source)}</span></b>${analysis.source==='local'?'<div class="ai-warning">AI was unavailable; this uses limited local rules.</div>':''}<p style="margin:7px 0"><b>Original:</b> ${escapeHtml(sentence)}</p><p style="margin:7px 0"><b>Minimum / natural correction:</b> ${escapeHtml(analysis.natural)}</p><p><b>Expression use:</b> ${analysis.expressionUsage.usedCorrectly?'✓ Used correctly':'Review needed'} — ${escapeHtml(analysis.expressionUsage.note||'')}</p>${corrections}<p style="margin:7px 0"><b>Next scheduled review:</b> ${days} day${days>1?'s':''}</p><button class="btn small secondary" onclick="togglePractice('${encodedWord}','review')">Open sentence history</button></div>`;
+  }catch(error){console.error(error);toast('Could not analyze the sentence')}
+  finally{button.disabled=false;button.textContent='Save & review sentence'}
 }
 
 function toggleAddExpression(){
@@ -1272,6 +1463,25 @@ function analyzeWriting(){
   completeTask('writing');saveState();
 }
 function countWords(text){return (text||'').trim().split(/\s+/).filter(Boolean).length}
+
+function renderLearningMemory(){
+  const content=document.getElementById('libraryContent');
+  const items=state.learningMemory.slice().sort((a,b)=>{
+    const status=(a.status==='active'?0:1)-(b.status==='active'?0:1);if(status)return status;
+    const priority={high:3,medium:2,low:1};return (priority[b.priority]||0)-(priority[a.priority]||0)||b.count-a.count||new Date(b.lastSeen)-new Date(a.lastSeen);
+  });
+  const active=items.filter(item=>item.status==='active').length;
+  const mastered=items.filter(item=>item.status==='mastered').length;
+  content.innerHTML=`<div class="recording-dashboard"><div class="mini-card"><span class="muted">Active patterns</span><strong>${active}</strong></div><div class="mini-card"><span class="muted">Marked mastered</span><strong>${mastered}</strong></div><div class="mini-card"><span class="muted">Total detections</span><strong>${items.reduce((sum,item)=>sum+(item.count||0),0)}</strong></div></div><div class="card" style="margin-bottom:15px"><h3>Learning memory</h3><p style="margin-bottom:0">AI or local feedback adds reusable error patterns here. Repeated patterns increase their count; mastered patterns return to active if they appear again.</p></div><div id="memoryCards"></div>`;
+  const root=document.getElementById('memoryCards');
+  if(!items.length){root.innerHTML='<div class="card empty-state">No learning pattern yet. Complete an AI-analyzed Conversation or sentence practice.</div>';return}
+  root.innerHTML=items.map(item=>`<div class="memory-card ${item.status==='mastered'?'mastered':''}"><div class="memory-head"><div><span class="memory-priority ${escapeHtml(item.priority||'medium')}">${escapeHtml(item.priority||'medium')} priority</span><h3 style="margin:8px 0 4px">${escapeHtml(item.category)}</h3><b>${escapeHtml(item.pattern)}</b></div><span class="feature-status ${item.status==='mastered'?'working':'limited'}">${item.status==='mastered'?'Mastered':'Active · '+item.count+'×'}</span></div><p>${escapeHtml(item.explanation||'')}</p>${(item.examples||[]).length?`<div class="transcript-box"><b>Recent example</b><br>${escapeHtml(item.examples[0])}</div>`:''}<p class="muted">Last seen: ${new Date(item.lastSeen).toLocaleString()} · Sources: ${(item.sources||[]).map(escapeHtml).join(', ')||'Unknown'}</p><button class="btn small secondary" onclick="toggleMemoryStatus('${item.id}')">${item.status==='mastered'?'Move back to active':'Mark mastered'}</button></div>`).join('');
+}
+
+function toggleMemoryStatus(id){
+  const item=state.learningMemory.find(memory=>memory.id===id);if(!item)return;
+  item.status=item.status==='mastered'?'active':'mastered';item.statusChangedAt=new Date().toISOString();saveState();renderLearningMemory();toast(item.status==='mastered'?'Pattern marked mastered':'Pattern moved back to active');
+}
 
 let recordingLibraryObjectUrls=[];
 
@@ -1695,9 +1905,10 @@ function renderProgress(){
   const reviewCount=Object.values(state.words).reduce((n,w)=>n+(w.reviewCount||0),0);
   const turns=state.conversations.flatMap(c=>(c.turns||[])).filter(t=>!t.retry);
   const avgTurn=turns.length?Math.round(turns.reduce((n,t)=>n+countWords(t.text),0)/turns.length):0;
+  const memoryIssues=state.learningMemory.slice().sort((a,b)=>(b.count||0)-(a.count||0));
   const corrections=state.conversations.flatMap(c=>(c.turns||[]).flatMap(t=>t.corrections||[]));
-  const issueCounts={}; corrections.forEach(c=>{const plain=c.replace(/<[^>]+>/g,'');issueCounts[plain]=(issueCounts[plain]||0)+1});
-  const issues=Object.entries(issueCounts).sort((a,b)=>b[1]-a[1]);
+  const issueCounts={}; corrections.forEach(c=>{const plain=typeof c==='string'?c:(c.category||c.pattern||'Language point');issueCounts[plain]=(issueCounts[plain]||0)+1});
+  const issues=memoryIssues.length?memoryIssues.map(item=>[`${item.category}: ${item.pattern}`,item.count]):Object.entries(issueCounts).sort((a,b)=>b[1]-a[1]);
   const writings=state.writings;
   const first=writings[0], latest=writings[writings.length-1];
   const modeCounts={}; state.conversations.forEach(c=>modeCounts[c.mode]=(modeCounts[c.mode]||0)+1);
@@ -1705,7 +1916,7 @@ function renderProgress(){
     <div class="grid grid-3">
       <div class="card"><p>Active vocabulary</p><h3 style="font-size:34px">${activeWords}</h3><span class="tag green">${reviewCount} reviews completed</span></div>
       <div class="card"><p>Average conversation paragraph</p><h3 style="font-size:34px">${avgTurn}</h3><span class="tag green">words per turn</span></div>
-      <div class="card"><p>Saved learning days</p><h3 style="font-size:34px">${state.activityDates.length}</h3><span class="tag green">Current streak: ${calculateStreak()}</span></div>
+      <div class="card"><p>AI-analyzed activities</p><h3 style="font-size:34px">${state.aiUsage.successes||0}</h3><span class="tag green">${state.aiUsage.fallbacks||0} local fallbacks</span></div>
     </div>
     <div class="grid grid-2" style="margin-top:18px">
       <div class="card"><h3>Most frequent detected issues</h3>${issues.length?`<table><tr><th>Detected pattern</th><th>Count</th></tr>${issues.slice(0,6).map(([i,n])=>`<tr><td>${i}</td><td>${n}</td></tr>`).join('')}</table>`:'<div class="empty-state">No saved corrections yet. Complete and save a conversation session.</div>'}</div>
@@ -1715,19 +1926,18 @@ function renderProgress(){
 }
 
 function detectBrowserFeatures(){
-  const speech=!!(window.SpeechRecognition||window.webkitSpeechRecognition),tts='speechSynthesis' in window,recording=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder),idb='indexedDB' in window;
+  const speech=!!(window.SpeechRecognition||window.webkitSpeechRecognition),recording=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder),idb='indexedDB' in window;
   const set=(badgeId,textId,ok,yes,no)=>{const badge=document.getElementById(badgeId),text=document.getElementById(textId);if(!badge)return;badge.className='feature-status '+(ok?'working':'unavailable');badge.textContent=ok?'Supported':'Not supported';text.textContent=ok?yes:no};
   set('recordStatusBadge','recordStatusText',recording,'Press-and-hold recording is available.','This browser cannot use MediaRecorder/getUserMedia.');
   set('audioStoreStatusBadge','audioStoreStatusText',idb,'Audio blobs can be stored locally.','IndexedDB is unavailable; recordings cannot persist.');
   set('speechStatusBadge','speechStatusText',speech,'Automatic transcript may be available.','Record/play still works; type the transcript manually.');
-  set('ttsStatusBadge','ttsStatusText',tts,'Browser text-to-speech is available.','Question audio is unavailable in this browser.');
 }
 
 async function runSelfTest(){
   const results=[];
   try{const k='fluentloop_test';localStorage.setItem(k,'ok');results.push(['Local storage',localStorage.getItem(k)==='ok','Can save and read text data']);localStorage.removeItem(k)}catch(e){results.push(['Local storage',false,e.message])}
   const required=['today','learn','coach','library','progress','status','libraryContent','chatInput','holdToSpeakButton','recordingPreview'];const missing=required.filter(id=>!document.getElementById(id));results.push(['Required interface',missing.length===0,missing.length?'Missing: '+missing.join(', '):'All required elements found']);
-  try{JSON.stringify(state);results.push(['Data schema',state.schemaVersion===2,'Schema version '+state.schemaVersion])}catch(e){results.push(['Data schema',false,e.message])}
+  try{JSON.stringify(state);results.push(['Data schema',state.schemaVersion===3,'Schema version '+state.schemaVersion])}catch(e){results.push(['Data schema',false,e.message])}
   const media=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder);results.push(['Microphone API',media,'Permission is only requested when you hold the recording button']);
   try{
     const testBlob=new Blob(['fluentloop-audio-test'],{type:'audio/webm'});
@@ -1739,7 +1949,8 @@ async function runSelfTest(){
     await deleteAudioRecord(id);
     results.push(['IndexedDB & archive',ok,ok?'Write, list, ZIP build and delete passed':'One recording operation failed']);
   }catch(e){results.push(['IndexedDB & archive',false,e.message])}
-  results.push(['Speech transcription',!!(window.SpeechRecognition||window.webkitSpeechRecognition),'Optional and browser-dependent']);results.push(['Question audio','speechSynthesis' in window,'Browser-dependent']);
+  results.push(['Speech transcription',!!(window.SpeechRecognition||window.webkitSpeechRecognition),'Optional and browser-dependent']);
+  const health=await checkAIHealth(false);results.push(['AI backend',health.mode==='ai',health.mode==='ai'?`Connected to ${health.provider} / ${health.model}`:health.mode==='test'?'Test mode works, but it is not semantic AI':health.message]);
   document.getElementById('selfTestResults').innerHTML=results.map(([name,ok,note])=>`<div class="test-result"><div><b>${name}</b><div class="muted">${note}</div></div><span class="feature-status ${ok?'working':'limited'}">${ok?'Pass':'Check'}</span></div>`).join('');renderStatusSummary();
 }
 
@@ -1748,7 +1959,7 @@ async function renderStatusSummary(){
   const reviews=Object.values(state.words).reduce((n,w)=>n+(w.reviewCount||0),0);
   let audioCount='unknown',audioBytes=0;
   try{const stats=await getAudioStorageStats();audioCount=stats.count;audioBytes=stats.bytes}catch(_){}
-  el.textContent=`Saved locally: ${Object.keys(state.words).length} word records, ${reviews} reviews, ${state.writings.length} writings, ${state.conversations.length} conversations, ${audioCount} audio recordings (${formatBytes(audioBytes)}). Text JSON and Recording Archive are exported separately.`;
+  el.textContent=`Saved locally: ${Object.keys(state.words).length} word records, ${reviews} reviews, ${state.writings.length} writings, ${state.conversations.length} conversations, ${state.learningMemory.length} learning-memory patterns, ${audioCount} audio recordings (${formatBytes(audioBytes)}). AI successes: ${state.aiUsage.successes||0}; local fallbacks: ${state.aiUsage.fallbacks||0}.`;
 }
 function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
@@ -1756,7 +1967,7 @@ function exportData(){
 }
 function importData(event){
   const file=event.target.files[0]; if(!file)return;
-  const reader=new FileReader();reader.onload=()=>{try{const incoming=JSON.parse(reader.result);if(![1,2].includes(incoming.schemaVersion))throw new Error('Unsupported schema');state={...emptyState(),...incoming,schemaVersion:2};localStorage.setItem(STATE_KEY,JSON.stringify(state));location.reload()}catch(e){toast('Import failed: '+e.message)}};reader.readAsText(file);
+  const reader=new FileReader();reader.onload=()=>{try{const incoming=JSON.parse(reader.result);if(![1,2,3].includes(incoming.schemaVersion))throw new Error('Unsupported schema');state={...emptyState(),...incoming,schemaVersion:3};localStorage.setItem(STATE_KEY,JSON.stringify(state));location.reload()}catch(e){toast('Import failed: '+e.message)}};reader.readAsText(file);
 }
 function updateResetButton(){document.getElementById('resetButton').disabled=document.getElementById('resetText').value!=='RESET'}
 async function resetAllData(){if(document.getElementById('resetText').value!=='RESET')return;localStorage.removeItem(STATE_KEY);try{await clearAudioDB()}catch(_){}location.reload()}
@@ -1765,6 +1976,7 @@ function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","
 renderLookupList();
 renderLibrary('due');
 detectBrowserFeatures();
+checkAIHealth(false);
 renderStatusSummary();
 renderStorageStatusPanel();
 renderProgress();

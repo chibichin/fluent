@@ -1,73 +1,124 @@
-# FluentLoop Local Working Build v1.2
+# FluentLoop Local Working Build v1.3
 
-Open `index.html` in a modern Chromium-based browser. Chrome or Edge is recommended for microphone and optional speech transcription.
+**AI Feedback & Learning Memory**
 
-## v1.1 working features
+V1.3 keeps the recording and local-data foundation from V1.2, then adds a secure local AI connector. The browser never contains the AI API key.
 
-- Clear primary, secondary, active, disabled and recording button states
-- Press-and-hold microphone recording; release to stop
-- Immediate playback of the original recording
-- Record again before sending
-- Optional browser speech transcription with editable transcript
-- Audio stored locally as Blob data in IndexedDB
-- Conversation turns save recording IDs, transcript, corrections and retries
-- Session summary can replay saved recordings
-- Learning Library `Review now` displays read-only gray sentence history
-- `Make a sentence` creates a new history item with original and locally corrected versions
-- Conversation target expressions also create sentence-history entries, including audio when available
-- System Status tests Local Storage, interface, schema and IndexedDB audio read/write/delete
+## What works
 
-## Important limitations
+- Press-and-hold microphone recording
+- Original-audio playback and IndexedDB persistence
+- Recording Library, individual download/delete, and ZIP archive export
+- Browser speech-to-text when supported
+- AI Conversation feedback through the local Node server
+- AI sentence feedback in Learning Library
+- Retry comparison for `Say it again`
+- Structured corrections with category, correction, explanation, and severity
+- Learning Memory for repeated grammar, word-choice, collocation, and naturalness patterns
+- Local rule-based fallback when AI is unavailable
+- Clear source labels: `AI feedback`, `Test feedback`, or `Local fallback`
+- Real-data Progress and Status pages
 
-- Conversation and sentence corrections use a small local rule set, not a connected AI model.
-- Browser speech transcription is optional and is not supported consistently across browsers.
-- JSON export contains text/state data only. Audio remains in IndexedDB in the current browser.
-- Microphone permission must be granted by the user.
+## Important distinction
 
-## Manual v1.1 test
+- **AI feedback** means the local Node server successfully contacted the configured model.
+- **Test feedback** is deterministic integration-test output. It is not semantic AI.
+- **Local fallback** uses a small set of browser rules. It is not full AI understanding.
 
-1. Open Status and run self-test.
-2. Open Conversation Coach.
-3. Hold `Hold to speak`, speak for several seconds, then release.
-4. Play the original recording.
-5. Edit or type the transcript and send.
-6. End the session and replay the saved recording in the summary.
-7. Open Learning Library and make a sentence with a target expression.
-8. Open `Review now`; confirm entries are gray and cannot be edited.
+## Start the app
 
+Read [START_HERE.md](START_HERE.md).
 
-## v1.1.1 介面調整
+### OpenAI mode
 
-- Learn 頁移除 `Simplify one level`。
-- Coach 頁把 `Hold to speak` 移到 transcript 輸入框正下方。
-- Coach 頁移除 `Hear question`。
+macOS/Linux:
 
+```bash
+./start-openai.sh
+```
 
-## v1.1.2 修正：Say it again
+Windows:
 
-- 點擊後顯示清楚的 Retry mode 面板。
-- 錄音鍵變為 `Hold to retry`，送出鍵變為 `Send retry`。
-- 顯示上一輪的自然版本，並自動捲動至輸入區。
-- 可取消 retry，原始回答仍然保留。
-- retry 送出後不會多跳一個新問題。
-- retry 紀錄保存來源 turn ID。
+```bat
+start-openai.bat
+```
 
+Then open:
 
-## v1.2 — Recording Library
+```text
+http://127.0.0.1:4173
+```
 
-- 新增 Learning Library → `Recordings`。
-- 錄音重新整理後仍可從 IndexedDB 讀取與播放。
-- 每筆錄音顯示 transcript、自然修正版、日期、模式、長度和檔案大小。
-- 可下載或單筆永久刪除錄音。
-- 可刪除全部音訊，但保留文字、糾正與進度紀錄。
-- 新增單一 ZIP Recording Archive，包含所有音訊與 `manifest.json`。
-- Status 顯示錄音數量、音訊大小、瀏覽器儲存估算和持久儲存狀態。
-- 支援向瀏覽器要求 persistent storage。
-- 新錄音會把 transcript、問題與 retry 資訊一併寫入音訊 metadata。
+The default model is `gpt-5-mini`. Override it with the `OPENAI_MODEL` environment variable. OpenAI API usage may incur charges on the API account.
 
+### Offline mode
 
-## 測試說明
+```bash
+./start-offline.sh
+```
 
-自動化 Chromium 測試已驗證錄音清單、文字對應、單筆刪除、全部刪除與 ZIP 結構。
-自動測試環境禁止導覽到本機或 synthetic origin，因此無法在該環境直接驗證重新整理後的 IndexedDB。
-請在實際 Chrome 或 Edge 中執行 `Status → Run self-test`，確認 `IndexedDB & archive` 顯示 Pass。
+or on Windows:
+
+```bat
+start-offline.bat
+```
+
+### Interface test mode
+
+```bash
+./start-test.sh
+```
+
+or:
+
+```bat
+start-test.bat
+```
+
+Test mode is prominently labelled and must not be used to judge language-feedback quality.
+
+## Data storage
+
+| Data | Location |
+|---|---|
+| Progress, transcripts, feedback, Learning Memory | Browser Local Storage |
+| Original recordings | Browser IndexedDB (`FluentLoopAudioDB`) |
+| API key | Local Node process environment only |
+| Exported recordings | User-selected Downloads folder as audio or ZIP |
+
+## AI feedback structure
+
+Conversation and sentence feedback use the same structure:
+
+- content response
+- strengths
+- natural version
+- up to three important corrections
+- target-expression usage
+- reusable Learning Memory items
+- follow-up question for a normal Conversation turn
+- before/after comparison for a retry
+
+## Known limitations
+
+- A transcript is required for grammar and meaning analysis.
+- Browser transcription support varies.
+- V1.3 does not score pronunciation, stress, rhythm, or linking.
+- There is no account, cloud sync, or multi-device audio sync.
+- The OpenAI path was integration-tested without a live account key; run **Status → Check AI connection** after configuring your own key.
+
+## Tests
+
+```bash
+npm test
+```
+
+This starts the server in labelled test mode and validates:
+
+- health endpoint
+- Conversation structured feedback
+- retry comparison
+- sentence feedback
+- static-app serving
+
+See [TESTING.md](TESTING.md) and [TEST_REPORT.json](TEST_REPORT.json).

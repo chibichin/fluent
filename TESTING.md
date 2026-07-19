@@ -1,59 +1,68 @@
-# FluentLoop v1.1 Test Summary
+# FluentLoop v1.3 testing guide
 
-## Automated checks passed
+## Automated server test
 
-- JavaScript syntax validation (`node --check`)
-- Page loads without JavaScript errors
-- System self-test UI renders
-- Active button receives `is-active` and `aria-pressed=true`
-- New vocabulary sentence is saved
-- Sentence history is gray and contains no editable fields
-- Press-and-hold recording enters recording state
-- Releasing creates a playable audio preview
-- Recording is attached to the conversation turn
-- Saved recording is playable in the session summary
+Run:
 
-## Test environment note
+```bash
+npm test
+```
 
-The automated browser environment blocks navigation to local test origins. MediaRecorder and IndexedDB were therefore exercised through deterministic browser API test doubles for the interaction test. The app's built-in **Status → Run self-test** performs a real IndexedDB write/read/delete check in the user's browser. Microphone permission and actual device audio must be verified manually on the target browser.
+Expected result: `status: passed`.
 
-## Recommended manual device test
+The automated test uses `AI_PROVIDER=mock`. This validates the client/server contract and JSON structure, not semantic language quality.
 
-1. Open `index.html` in Chrome or Edge.
-2. Go to **Status** and run self-test.
-3. Grant microphone permission.
-4. Hold **Hold to speak** for 3–5 seconds, then release.
-5. Play the recording, type or edit the transcript, and send.
-6. End the session and replay the saved recording.
-7. Reload the page and confirm saved sentence history remains available.
+## Tested browser integration flow
 
+A fresh headless Chromium document was loaded with a deterministic test connector. The test completed:
 
-## v1.1.1 regression checks
+1. AI health status changes to `Test mode`.
+2. Submit the first Conversation transcript.
+3. Render structured feedback with a source badge.
+4. Add three patterns to Learning Memory.
+5. Click `Say it again`.
+6. Submit a retry.
+7. Render before/after comparison.
+8. Confirm retry does not append an extra follow-up question.
+9. Open Learning Memory.
+10. Analyze and save a vocabulary sentence.
 
-- Learn toolbar contains only `Comprehension` and `Finish reading`.
-- Coach transcript textarea appears before `Hold to speak`.
-- `Hear question` is absent from the Coach interface.
-- Hold-to-record event handlers remain attached after reordering.
+No JavaScript runtime exception was detected in this flow.
 
+## Real OpenAI connection test
 
-## v1.1.2 retry checks
+1. Start `start-openai.sh` or `start-openai.bat`.
+2. Open `http://127.0.0.1:4173`.
+3. Open **Status**.
+4. Click **Check AI connection**.
+5. Confirm the badge says `AI connected` and displays the provider/model.
+6. Submit a Conversation response containing a real personal opinion.
+7. Confirm the feedback source says `AI feedback` rather than `Local fallback`.
+8. Check that corrections preserve the original meaning and do not exceed three.
+9. Use `Say it again`; confirm the second response shows a comparison.
+10. Open **Learning Library → Learning memory** and confirm patterns were saved.
 
-- Click `Say it again`: visible retry panel appears.
-- Button changes to `✓ Retry selected`.
-- Recording button changes to `Hold to retry`.
-- Send button changes to `Send retry`.
-- Cancel restores normal controls.
-- Sending a retry increments retry count and does not append an extra follow-up question.
+## Fallback test
 
+1. Start offline mode.
+2. Submit a Conversation response.
+3. Confirm recording and transcript are saved.
+4. Confirm feedback clearly says `Local fallback`.
+5. Confirm the app does not claim semantic AI understanding.
 
-## v1.2 recording management checks
+## Sentence-feedback test
 
-1. Record and send two Conversation responses.
-2. End the session and refresh the page.
-3. Open Learning Library → Recordings.
-4. Confirm both recordings play after refresh.
-5. Download one recording and verify the audio file opens.
-6. Delete one recording and confirm its transcript remains in conversation data.
-7. Export Recording Archive and verify ZIP contains `manifest.json` and the recordings folder.
-8. Run Status → Self-test; `IndexedDB & archive` should pass.
-9. Test Delete all audio; text progress should remain.
+1. Open Learning Library.
+2. Choose an active expression.
+3. Click **Make a sentence**.
+4. Save a sentence with an intentional error.
+5. Confirm source label, natural version, expression-use result, correction category, and next review date.
+6. Open **Review now** and confirm the sentence history is gray and read-only.
+
+## Device tests still required
+
+- Actual microphone permission
+- Real recording quality
+- Browser speech-to-text
+- IndexedDB persistence after browser restart
+- Live API account authentication, rate limits, and model availability

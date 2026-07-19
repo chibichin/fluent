@@ -1,42 +1,51 @@
 {
-  "version": "v1.2",
-  "status": "passed_with_device_check",
-  "syntax": {
-    "javascript": "passed with node --check",
-    "page_title": "FluentLoop Local — Working Build v1.2",
-    "page_errors": []
+  "version": "1.3.0",
+  "status": "passed_with_live_api_device_check_required",
+  "build": "AI Feedback & Learning Memory",
+  "automated_server_test": {
+    "status": "passed",
+    "provider": "deterministic test mode",
+    "checks": [
+      "health endpoint",
+      "structured Conversation feedback",
+      "retry comparison",
+      "sentence feedback",
+      "static app serving"
+    ]
   },
-  "recording_library_browser_test": {
-    "method": "Headless Chromium with an in-memory storage adapter",
-    "recording_cards_rendered": 2,
-    "transcripts_rendered": true,
-    "single_recording_delete": "passed",
-    "audio_reference_removed_but_text_retained": true,
-    "delete_all_audio": "passed",
-    "empty_state_after_delete_all": true
+  "headless_chromium_ui_test": {
+    "status": "passed",
+    "schema_version": 3,
+    "ai_status_badge": "Test mode",
+    "first_conversation_turns": 1,
+    "feedback_source": "Test feedback",
+    "learning_memory_patterns_created": 3,
+    "retry_turns": 2,
+    "retry_count": 1,
+    "retry_comparison_rendered": true,
+    "extra_follow_up_after_retry": false,
+    "retry_source_linked": true,
+    "sentence_feedback_source": "Test feedback",
+    "sentence_history_saved": true,
+    "javascript_runtime_exceptions": []
   },
-  "recording_archive_test": {
-    "zip_valid": true,
-    "files": [
-      "manifest.json",
-      "README.txt",
-      "recordings/<timestamp>_<mode>_<audio-id>.webm"
-    ],
-    "recording_count": 2,
-    "manifest_includes_transcripts": true
+  "javascript_syntax": "passed",
+  "security_design": {
+    "api_key_in_browser": false,
+    "api_key_storage": "Node process environment variable",
+    "browser_calls": "same-origin /api/health and /api/feedback",
+    "offline_fallback_labelled": true,
+    "test_mode_labelled_not_ai": true
   },
-  "indexeddb": {
-    "implementation_present": true,
-    "device_test_required": true,
-    "reason": "The automated environment blocks navigation to local or synthetic origins. Run Status > Run self-test in Chrome or Edge to verify IndexedDB write, list, ZIP build and delete on the actual device."
+  "live_openai_test": {
+    "status": "not_run",
+    "reason": "No user API key was available in the build environment.",
+    "required_check": "Start OpenAI mode, then use Status > Check AI connection and submit a real Conversation response."
   },
-  "manual_test_path": [
-    "Record and send two Conversation responses.",
-    "End the session and refresh the page.",
-    "Open Learning Library > Recordings.",
-    "Play both recordings.",
-    "Export the Recording Archive and open the ZIP.",
-    "Delete one audio recording and verify its transcript remains.",
-    "Run Status > Run self-test."
+  "device_checks_remaining": [
+    "microphone permission and sound quality",
+    "browser speech-to-text",
+    "IndexedDB persistence after browser restart",
+    "live API authentication/rate limits/model availability"
   ]
 }

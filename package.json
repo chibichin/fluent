@@ -1,0 +1,14 @@
+{
+  "name": "fluentloop-local-v1-3",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "start:test": "AI_PROVIDER=mock node server.mjs",
+    "test": "node test-server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
